@@ -9,7 +9,7 @@ internal class ConsumptionEntry
     public string FoodName { get; set; } = string.Empty;
     public int Calories { get; set; }
     public DateTime EntryTimestamp { get; set; }
-    public DateTime CreatedAt { get; set; }
+    public DateTime CreatedOn { get; set; }
     public bool IsDeleted { get; set; }
     public DateTime? IsDeletedOn { get; set; }
 }

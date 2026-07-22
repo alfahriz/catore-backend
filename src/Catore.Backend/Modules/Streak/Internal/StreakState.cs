@@ -7,5 +7,5 @@ internal class StreakState
     public int CurrentStreakCount { get; set; }
     public DateOnly? LastLoggedDate { get; set; }
     public bool StreakIsFrozen { get; set; }
-    public DateTime LastUpdated { get; set; }
+    public DateTime ModifiedOn { get; set; }
 }

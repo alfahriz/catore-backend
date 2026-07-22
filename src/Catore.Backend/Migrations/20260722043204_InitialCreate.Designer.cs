@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Catore.Backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260721104529_InitialCreate")]
+    [Migration("20260722043204_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -36,18 +36,18 @@ namespace Catore.Backend.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("activesessionid");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime>("CreatedOn")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("createdat");
+                        .HasColumnName("createdon");
 
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("email");
 
-                    b.Property<DateTime>("LastUpdated")
+                    b.Property<DateTime>("ModifiedOn")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("lastupdated");
+                        .HasColumnName("modifiedon");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
@@ -89,9 +89,9 @@ namespace Catore.Backend.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("calories");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime>("CreatedOn")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("createdat");
+                        .HasColumnName("createdon");
 
                     b.Property<DateOnly>("EntryDate")
                         .HasColumnType("date")
@@ -166,9 +166,9 @@ namespace Catore.Backend.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("isfrozen");
 
-                    b.Property<DateTime>("LastUpdated")
+                    b.Property<DateTime>("ModifiedOn")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("lastupdated");
+                        .HasColumnName("modifiedon");
 
                     b.Property<bool>("PaToday")
                         .HasColumnType("boolean")
@@ -205,9 +205,9 @@ namespace Catore.Backend.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("dayssincelastwipefreeze");
 
-                    b.Property<DateTime>("LastUpdated")
+                    b.Property<DateTime>("ModifiedOn")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("lastupdated");
+                        .HasColumnName("modifiedon");
 
                     b.Property<int>("StreakFreezeCount")
                         .HasColumnType("integer")
@@ -240,9 +240,9 @@ namespace Catore.Backend.Migrations
                         .HasColumnType("text")
                         .HasColumnName("fcmtoken");
 
-                    b.Property<DateTime>("LastUpdated")
+                    b.Property<DateTime>("ModifiedOn")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("lastupdated");
+                        .HasColumnName("modifiedon");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid")
@@ -256,12 +256,12 @@ namespace Catore.Backend.Migrations
                     b.ToTable("notificationsubscription", (string)null);
                 });
 
-            modelBuilder.Entity("Catore.Backend.Modules.Profile.Internal.Profile", b =>
+            modelBuilder.Entity("Catore.Backend.Modules.ProfileAccount.Internal.ProfileAccount", b =>
                 {
-                    b.Property<Guid>("ProfilePk")
+                    b.Property<Guid>("ProfileAccountPk")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasColumnName("profilepk");
+                        .HasColumnName("profileaccountpk");
 
                     b.Property<int>("Age")
                         .HasColumnType("integer")
@@ -302,14 +302,14 @@ namespace Catore.Backend.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("isupgraded");
 
-                    b.Property<DateTime>("LastUpdated")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("lastupdated");
-
                     b.Property<string>("MetricPreference")
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("metricpreference");
+
+                    b.Property<DateTime>("ModifiedOn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("modifiedon");
 
                     b.Property<string>("Timezone")
                         .IsRequired()
@@ -324,12 +324,12 @@ namespace Catore.Backend.Migrations
                         .HasColumnType("numeric")
                         .HasColumnName("weightcurrent");
 
-                    b.HasKey("ProfilePk");
+                    b.HasKey("ProfileAccountPk");
 
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("profile", (string)null);
+                    b.ToTable("profileaccount", (string)null);
                 });
 
             modelBuilder.Entity("Catore.Backend.Modules.Streak.Internal.StreakState", b =>
@@ -347,9 +347,9 @@ namespace Catore.Backend.Migrations
                         .HasColumnType("date")
                         .HasColumnName("lastloggeddate");
 
-                    b.Property<DateTime>("LastUpdated")
+                    b.Property<DateTime>("ModifiedOn")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("lastupdated");
+                        .HasColumnName("modifiedon");
 
                     b.Property<bool>("StreakIsFrozen")
                         .HasColumnType("boolean")
@@ -374,9 +374,9 @@ namespace Catore.Backend.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("weightlogpk");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<DateTime>("CreatedOn")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("createdat");
+                        .HasColumnName("createdon");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean")
@@ -390,9 +390,9 @@ namespace Catore.Backend.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("loggedat");
 
-                    b.Property<DateTime?>("UpdatedAt")
+                    b.Property<DateTime?>("ModifiedOn")
                         .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updatedat");
+                        .HasColumnName("modifiedon");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid")

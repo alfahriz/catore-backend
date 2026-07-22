@@ -1,8 +1,8 @@
-namespace Catore.Backend.Modules.Profile.Internal;
+namespace Catore.Backend.Modules.ProfileAccount.Internal;
 
-internal class Profile
+internal class ProfileAccount
 {
-    public Guid ProfilePk { get; set; }
+    public Guid ProfileAccountPk { get; set; }
     public Guid UserId { get; set; }
     public decimal Height { get; set; }
     public decimal WeightCurrent { get; set; }
@@ -14,7 +14,7 @@ internal class Profile
     public bool GoalWeightIsManual { get; set; }
     public string MetricPreference { get; set; } = "metric";
     public string Timezone { get; set; } = string.Empty;
-    public DateTime LastUpdated { get; set; }
+    public DateTime ModifiedOn { get; set; }
     public bool IsDeleted { get; set; }
     public bool IsUpgraded { get; set; }
 }

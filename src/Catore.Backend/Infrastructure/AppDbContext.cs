@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Catore.Backend.Modules.Auth.Internal;
-using Catore.Backend.Modules.Profile.Internal;
+using Catore.Backend.Modules.ProfileAccount.Internal;
 using Catore.Backend.Modules.Consumption.Internal;
 using Catore.Backend.Modules.WeightTracking.Internal;
 using Catore.Backend.Modules.Streak.Internal;
@@ -16,7 +16,7 @@ public class AppDbContext : DbContext
     }
 
     internal DbSet<UserAccount> UserAccounts => Set<UserAccount>();
-    internal DbSet<Modules.Profile.Internal.Profile> Profiles => Set<Modules.Profile.Internal.Profile>();
+    internal DbSet<ProfileAccount> ProfileAccounts => Set<ProfileAccount>();
     internal DbSet<ConsumptionEntry> ConsumptionEntries => Set<ConsumptionEntry>();
     internal DbSet<DailyRecord> DailyRecords => Set<DailyRecord>();
     internal DbSet<WeightLog> WeightLogs => Set<WeightLog>();
@@ -39,15 +39,15 @@ public class AppDbContext : DbContext
             entity.Property(e => e.ActiveSessionId).HasColumnName("activesessionid");
             entity.Property(e => e.ResetToken).HasColumnName("resettoken");
             entity.Property(e => e.ResetTokenExpiry).HasColumnName("resettokenexpiry");
-            entity.Property(e => e.CreatedAt).HasColumnName("createdat");
-            entity.Property(e => e.LastUpdated).HasColumnName("lastupdated");
+            entity.Property(e => e.CreatedOn).HasColumnName("createdon");
+            entity.Property(e => e.ModifiedOn).HasColumnName("modifiedon");
         });
 
-        modelBuilder.Entity<Modules.Profile.Internal.Profile>(entity =>
+        modelBuilder.Entity<ProfileAccount>(entity =>
         {
-            entity.ToTable("profile");
-            entity.HasKey(e => e.ProfilePk);
-            entity.Property(e => e.ProfilePk).HasColumnName("profilepk");
+            entity.ToTable("profileaccount");
+            entity.HasKey(e => e.ProfileAccountPk);
+            entity.Property(e => e.ProfileAccountPk).HasColumnName("profileaccountpk");
             entity.Property(e => e.UserId).HasColumnName("userid");
             entity.HasIndex(e => e.UserId).IsUnique();
             entity.Property(e => e.Height).HasColumnName("height");
@@ -60,7 +60,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.GoalWeightIsManual).HasColumnName("goalweightismanual");
             entity.Property(e => e.MetricPreference).HasColumnName("metricpreference");
             entity.Property(e => e.Timezone).HasColumnName("timezone");
-            entity.Property(e => e.LastUpdated).HasColumnName("lastupdated");
+            entity.Property(e => e.ModifiedOn).HasColumnName("modifiedon");
             entity.Property(e => e.IsDeleted).HasColumnName("isdeleted");
             entity.Property(e => e.IsUpgraded).HasColumnName("isupgraded");
         });
@@ -76,7 +76,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.FoodName).HasColumnName("foodname").HasMaxLength(255);
             entity.Property(e => e.Calories).HasColumnName("calories");
             entity.Property(e => e.EntryTimestamp).HasColumnName("entrytimestamp");
-            entity.Property(e => e.CreatedAt).HasColumnName("createdat");
+            entity.Property(e => e.CreatedOn).HasColumnName("createdon");
             entity.Property(e => e.IsDeleted).HasColumnName("isdeleted");
             entity.Property(e => e.IsDeletedOn).HasColumnName("isdeletedon");
         });
@@ -95,7 +95,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.EffectiveLimit).HasColumnName("effectivelimit");
             entity.Property(e => e.CreatedVia).HasColumnName("createdvia");
             entity.Property(e => e.IsFrozen).HasColumnName("isfrozen");
-            entity.Property(e => e.LastUpdated).HasColumnName("lastupdated");
+            entity.Property(e => e.ModifiedOn).HasColumnName("modifiedon");
             entity.Property(e => e.IsDeleted).HasColumnName("isdeleted");
             entity.Property(e => e.IsDeletedOn).HasColumnName("isdeletedon");
         });
@@ -108,8 +108,8 @@ public class AppDbContext : DbContext
             entity.Property(e => e.UserId).HasColumnName("userid");
             entity.Property(e => e.WeightValue).HasColumnName("weightvalue").HasColumnType("numeric(5,2)");
             entity.Property(e => e.LoggedAt).HasColumnName("loggedat");
-            entity.Property(e => e.CreatedAt).HasColumnName("createdat");
-            entity.Property(e => e.UpdatedAt).HasColumnName("updatedat");
+            entity.Property(e => e.CreatedOn).HasColumnName("createdon");
+            entity.Property(e => e.ModifiedOn).HasColumnName("modifiedon");
             entity.Property(e => e.IsDeleted).HasColumnName("isdeleted");
             entity.Property(e => e.IsDeletedOn).HasColumnName("isdeletedon");
         });
@@ -124,7 +124,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.CurrentStreakCount).HasColumnName("currentstreakcount");
             entity.Property(e => e.LastLoggedDate).HasColumnName("lastloggeddate");
             entity.Property(e => e.StreakIsFrozen).HasColumnName("streakisfrozen");
-            entity.Property(e => e.LastUpdated).HasColumnName("lastupdated");
+            entity.Property(e => e.ModifiedOn).HasColumnName("modifiedon");
         });
 
         modelBuilder.Entity<FreezeState>(entity =>
@@ -138,7 +138,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.WipeFreezeCount).HasColumnName("wipefreezecount");
             entity.Property(e => e.DaysSinceLastStreakFreeze).HasColumnName("dayssincelaststreakfreeze");
             entity.Property(e => e.DaysSinceLastWipeFreeze).HasColumnName("dayssincelastwipefreeze");
-            entity.Property(e => e.LastUpdated).HasColumnName("lastupdated");
+            entity.Property(e => e.ModifiedOn).HasColumnName("modifiedon");
         });
 
         modelBuilder.Entity<NotificationSubscription>(entity =>
@@ -149,7 +149,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.UserId).HasColumnName("userid");
             entity.HasIndex(e => e.UserId).IsUnique();
             entity.Property(e => e.FcmToken).HasColumnName("fcmtoken");
-            entity.Property(e => e.LastUpdated).HasColumnName("lastupdated");
+            entity.Property(e => e.ModifiedOn).HasColumnName("modifiedon");
         });
     }
 }

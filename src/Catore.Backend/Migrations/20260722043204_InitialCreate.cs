@@ -22,7 +22,7 @@ namespace Catore.Backend.Migrations
                     foodname = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
                     calories = table.Column<int>(type: "integer", nullable: false),
                     entrytimestamp = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    createdat = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    createdon = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     isdeleted = table.Column<bool>(type: "boolean", nullable: false),
                     isdeletedon = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
@@ -44,7 +44,7 @@ namespace Catore.Backend.Migrations
                     effectivelimit = table.Column<decimal>(type: "numeric", nullable: false),
                     createdvia = table.Column<string>(type: "text", nullable: false),
                     isfrozen = table.Column<bool>(type: "boolean", nullable: false),
-                    lastupdated = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    modifiedon = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     isdeleted = table.Column<bool>(type: "boolean", nullable: false),
                     isdeletedon = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
@@ -63,7 +63,7 @@ namespace Catore.Backend.Migrations
                     wipefreezecount = table.Column<int>(type: "integer", nullable: false),
                     dayssincelaststreakfreeze = table.Column<int>(type: "integer", nullable: false),
                     dayssincelastwipefreeze = table.Column<int>(type: "integer", nullable: false),
-                    lastupdated = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    modifiedon = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -77,7 +77,7 @@ namespace Catore.Backend.Migrations
                     notificationsubscriptionpk = table.Column<Guid>(type: "uuid", nullable: false),
                     userid = table.Column<Guid>(type: "uuid", nullable: false),
                     fcmtoken = table.Column<string>(type: "text", nullable: true),
-                    lastupdated = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    modifiedon = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -85,10 +85,10 @@ namespace Catore.Backend.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "profile",
+                name: "profileaccount",
                 columns: table => new
                 {
-                    profilepk = table.Column<Guid>(type: "uuid", nullable: false),
+                    profileaccountpk = table.Column<Guid>(type: "uuid", nullable: false),
                     userid = table.Column<Guid>(type: "uuid", nullable: false),
                     height = table.Column<decimal>(type: "numeric", nullable: false),
                     weightcurrent = table.Column<decimal>(type: "numeric", nullable: false),
@@ -100,13 +100,13 @@ namespace Catore.Backend.Migrations
                     goalweightismanual = table.Column<bool>(type: "boolean", nullable: false),
                     metricpreference = table.Column<string>(type: "text", nullable: false),
                     timezone = table.Column<string>(type: "text", nullable: false),
-                    lastupdated = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    modifiedon = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
                     isdeleted = table.Column<bool>(type: "boolean", nullable: false),
                     isupgraded = table.Column<bool>(type: "boolean", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_profile", x => x.profilepk);
+                    table.PrimaryKey("PK_profileaccount", x => x.profileaccountpk);
                 });
 
             migrationBuilder.CreateTable(
@@ -118,7 +118,7 @@ namespace Catore.Backend.Migrations
                     currentstreakcount = table.Column<int>(type: "integer", nullable: false),
                     lastloggeddate = table.Column<DateOnly>(type: "date", nullable: true),
                     streakisfrozen = table.Column<bool>(type: "boolean", nullable: false),
-                    lastupdated = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    modifiedon = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -137,8 +137,8 @@ namespace Catore.Backend.Migrations
                     activesessionid = table.Column<Guid>(type: "uuid", nullable: true),
                     resettoken = table.Column<string>(type: "text", nullable: true),
                     resettokenexpiry = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    createdat = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    lastupdated = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    createdon = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    modifiedon = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -153,8 +153,8 @@ namespace Catore.Backend.Migrations
                     userid = table.Column<Guid>(type: "uuid", nullable: false),
                     weightvalue = table.Column<decimal>(type: "numeric(5,2)", nullable: false),
                     loggedat = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    createdat = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    updatedat = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    createdon = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    modifiedon = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     isdeleted = table.Column<bool>(type: "boolean", nullable: false),
                     isdeletedon = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
@@ -182,8 +182,8 @@ namespace Catore.Backend.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_profile_userid",
-                table: "profile",
+                name: "IX_profileaccount_userid",
+                table: "profileaccount",
                 column: "userid",
                 unique: true);
 
@@ -216,7 +216,7 @@ namespace Catore.Backend.Migrations
                 name: "notificationsubscription");
 
             migrationBuilder.DropTable(
-                name: "profile");
+                name: "profileaccount");
 
             migrationBuilder.DropTable(
                 name: "streakstate");

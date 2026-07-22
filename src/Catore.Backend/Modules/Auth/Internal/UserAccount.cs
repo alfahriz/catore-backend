@@ -10,6 +10,6 @@ internal class UserAccount
     public Guid? ActiveSessionId { get; set; }
     public string? ResetToken { get; set; }
     public DateTime? ResetTokenExpiry { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime LastUpdated { get; set; }
+    public DateTime CreatedOn { get; set; }
+    public DateTime ModifiedOn { get; set; }
 }

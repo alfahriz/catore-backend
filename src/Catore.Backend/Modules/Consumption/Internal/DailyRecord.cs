@@ -11,7 +11,7 @@ internal class DailyRecord
     public decimal EffectiveLimit { get; set; }
     public string CreatedVia { get; set; } = string.Empty;
     public bool IsFrozen { get; set; }
-    public DateTime LastUpdated { get; set; }
+    public DateTime ModifiedOn { get; set; }
     public bool IsDeleted { get; set; }
     public DateTime? IsDeletedOn { get; set; }
 }
