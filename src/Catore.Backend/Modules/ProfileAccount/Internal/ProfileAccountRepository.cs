@@ -17,6 +17,14 @@ internal class ProfileAccountRepository
         return await _db.Set<ProfileAccount>().FirstOrDefaultAsync(p => p.UserId == userId);
     }
 
+    public async Task<List<Guid>> GetAllActiveUserIds()
+    {
+        return await _db.Set<ProfileAccount>()
+            .Where(p => !p.IsDeleted && !p.IsUpgraded)
+            .Select(p => p.UserId)
+            .ToListAsync();
+    }
+
     public async Task Add(ProfileAccount profile)
     {
         _db.Set<ProfileAccount>().Add(profile);

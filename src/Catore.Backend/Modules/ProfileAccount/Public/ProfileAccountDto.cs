@@ -49,3 +49,8 @@ public record TimezoneRefreshResultDto(
     bool Success,
     string? ErrorMessage
 );
+
+public record EffectiveLimitDto(
+    decimal Tdee,
+    decimal Limit
+);

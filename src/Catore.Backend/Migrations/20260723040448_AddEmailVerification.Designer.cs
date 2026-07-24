@@ -3,6 +3,7 @@ using System;
 using Catore.Backend.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Catore.Backend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260723040448_AddEmailVerification")]
+    partial class AddEmailVerification
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -214,14 +217,6 @@ namespace Catore.Backend.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("dayssincelastwipefreeze");
 
-                    b.Property<DateOnly?>("LastStreakFreezeGainedDate")
-                        .HasColumnType("date")
-                        .HasColumnName("laststreakfreezegaineddate");
-
-                    b.Property<DateOnly?>("LastWipeFreezeGainedDate")
-                        .HasColumnType("date")
-                        .HasColumnName("lastwipefreezegaineddate");
-
                     b.Property<DateTime>("ModifiedOn")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("modifiedon");
@@ -318,10 +313,6 @@ namespace Catore.Backend.Migrations
                     b.Property<bool>("IsUpgraded")
                         .HasColumnType("boolean")
                         .HasColumnName("isupgraded");
-
-                    b.Property<DateTime?>("LastWipedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("lastwipedat");
 
                     b.Property<string>("MetricPreference")
                         .IsRequired()

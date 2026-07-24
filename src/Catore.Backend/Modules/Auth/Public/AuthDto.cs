@@ -16,3 +16,8 @@ public record LoginResultDto(
     string? AccessToken,
     string? RefreshToken
 );
+
+public record ResendVerificationResultDto(
+    bool Success,
+    int CooldownSecondsRemaining
+);

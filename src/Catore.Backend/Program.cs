@@ -5,12 +5,18 @@ using Microsoft.IdentityModel.Tokens;
 using Catore.Backend.Infrastructure;
 using Catore.Backend.Modules.Auth.Internal;
 using Catore.Backend.Modules.Auth.Public;
+using Catore.Backend.Modules.Consumption.Internal;
+using Catore.Backend.Modules.Consumption.Public;
+using Catore.Backend.Modules.Freeze.Internal;
+using Catore.Backend.Modules.Freeze.Public;
 using Catore.Backend.Modules.Notification.Internal;
 using Catore.Backend.Modules.Notification.Public;
 using Catore.Backend.Modules.ProfileAccount.Internal;
 using Catore.Backend.Modules.ProfileAccount.Public;
 using Catore.Backend.Modules.Streak.Internal;
 using Catore.Backend.Modules.Streak.Public;
+using Catore.Backend.Modules.WeightTracking.Internal;
+using Catore.Backend.Modules.WeightTracking.Public;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,6 +64,7 @@ builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<IAuthQueries>(sp => sp.GetRequiredService<AuthService>());
 builder.Services.AddScoped<IAuthCommands>(sp => sp.GetRequiredService<AuthService>());
+builder.Services.AddHostedService<UnverifiedAccountCleanupJob>();
 
 // Modul Notification
 builder.Services.AddScoped<NotificationRepository>();
@@ -65,16 +72,36 @@ builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<INotificationSender>(sp => sp.GetRequiredService<NotificationService>());
 builder.Services.AddScoped<INotificationCommands>(sp => sp.GetRequiredService<NotificationService>());
 
-// Modul Streak (STUB)
+// Modul Freeze
+builder.Services.AddScoped<FreezeRepository>();
+builder.Services.AddScoped<FreezeService>();
+builder.Services.AddScoped<IFreezeQueries>(sp => sp.GetRequiredService<FreezeService>());
+builder.Services.AddScoped<IFreezeCommands>(sp => sp.GetRequiredService<FreezeService>());
+
+// Modul Streak
+builder.Services.AddScoped<StreakRepository>();
 builder.Services.AddScoped<StreakService>();
 builder.Services.AddScoped<IStreakQueries>(sp => sp.GetRequiredService<StreakService>());
 builder.Services.AddScoped<IStreakCommands>(sp => sp.GetRequiredService<StreakService>());
+builder.Services.AddHostedService<WipeCheckJob>();
 
 // Modul ProfileAccount
 builder.Services.AddScoped<ProfileAccountRepository>();
 builder.Services.AddScoped<ProfileAccountService>();
 builder.Services.AddScoped<IProfileAccountQueries>(sp => sp.GetRequiredService<ProfileAccountService>());
 builder.Services.AddScoped<IProfileAccountCommands>(sp => sp.GetRequiredService<ProfileAccountService>());
+
+// Modul Consumption
+builder.Services.AddScoped<ConsumptionRepository>();
+builder.Services.AddScoped<ConsumptionService>();
+builder.Services.AddScoped<IConsumptionQueries>(sp => sp.GetRequiredService<ConsumptionService>());
+builder.Services.AddScoped<IConsumptionCommands>(sp => sp.GetRequiredService<ConsumptionService>());
+
+// Modul WeightTracking
+builder.Services.AddScoped<WeightTrackingRepository>();
+builder.Services.AddScoped<WeightTrackingService>();
+builder.Services.AddScoped<IWeightTrackingQueries>(sp => sp.GetRequiredService<WeightTrackingService>());
+builder.Services.AddScoped<IWeightTrackingCommands>(sp => sp.GetRequiredService<WeightTrackingService>());
 
 var jwtSecret = builder.Configuration["Jwt:Secret"]!;
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

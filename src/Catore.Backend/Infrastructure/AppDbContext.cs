@@ -39,6 +39,9 @@ public class AppDbContext : DbContext
             entity.Property(e => e.ActiveSessionId).HasColumnName("activesessionid");
             entity.Property(e => e.ResetToken).HasColumnName("resettoken");
             entity.Property(e => e.ResetTokenExpiry).HasColumnName("resettokenexpiry");
+            entity.Property(e => e.IsEmailVerified).HasColumnName("isemailverified");
+            entity.Property(e => e.VerifyToken).HasColumnName("verifytoken");
+            entity.Property(e => e.VerifyTokenExpiry).HasColumnName("verifytokenexpiry");
             entity.Property(e => e.CreatedOn).HasColumnName("createdon");
             entity.Property(e => e.ModifiedOn).HasColumnName("modifiedon");
         });
@@ -63,6 +66,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.ModifiedOn).HasColumnName("modifiedon");
             entity.Property(e => e.IsDeleted).HasColumnName("isdeleted");
             entity.Property(e => e.IsUpgraded).HasColumnName("isupgraded");
+            entity.Property(e => e.LastWipedAt).HasColumnName("lastwipedat");
         });
 
         modelBuilder.Entity<ConsumptionEntry>(entity =>
@@ -138,6 +142,8 @@ public class AppDbContext : DbContext
             entity.Property(e => e.WipeFreezeCount).HasColumnName("wipefreezecount");
             entity.Property(e => e.DaysSinceLastStreakFreeze).HasColumnName("dayssincelaststreakfreeze");
             entity.Property(e => e.DaysSinceLastWipeFreeze).HasColumnName("dayssincelastwipefreeze");
+            entity.Property(e => e.LastStreakFreezeGainedDate).HasColumnName("laststreakfreezegaineddate");
+            entity.Property(e => e.LastWipeFreezeGainedDate).HasColumnName("lastwipefreezegaineddate");
             entity.Property(e => e.ModifiedOn).HasColumnName("modifiedon");
         });
 

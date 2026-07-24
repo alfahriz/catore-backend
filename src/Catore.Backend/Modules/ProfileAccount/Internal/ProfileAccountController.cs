@@ -6,7 +6,7 @@ using Catore.Backend.Modules.ProfileAccount.Public;
 namespace Catore.Backend.Modules.ProfileAccount.Internal;
 
 [ApiController]
-[Route("profile")]
+[Route("api/v1/profile")]
 [Authorize]
 public class ProfileAccountController : ControllerBase
 {

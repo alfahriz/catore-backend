@@ -6,7 +6,7 @@ using Catore.Backend.Modules.Auth.Public;
 namespace Catore.Backend.Modules.Auth.Internal;
 
 [ApiController]
-[Route("auth")]
+[Route("api/v1/auth")]
 [Authorize]
 public class AuthController : ControllerBase
 {
@@ -88,9 +88,34 @@ public class AuthController : ControllerBase
 
         return Ok();
     }
+
+    [AllowAnonymous]
+    [HttpPost("verify-email")]
+    public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequest request)
+    {
+        var success = await _authCommands.VerifyEmail(request.VerifyToken);
+        if (!success)
+        {
+            return BadRequest(new { error = "Invalid or expired verification token" });
+        }
+
+        return Ok();
+    }
+
+    [AllowAnonymous]
+    [HttpPost("resend-verification")]
+    public async Task<IActionResult> ResendVerification([FromBody] ResendVerificationRequest request)
+    {
+        var result = await _authCommands.ResendVerification(request.Email);
+        // Selalu return Ok, terlepas dari email ditemukan/sudah verified (hindari account enumeration).
+        // cooldownSecondsRemaining > 0 dipakai FE buat render countdown tombol resend.
+        return Ok(new { cooldownSecondsRemaining = result.CooldownSecondsRemaining });
+    }
 }
 
 public record SignUpRequest(string Email, string Password, string ConfirmPassword);
 public record LoginRequest(string Email, string Password, string? FcmToken);
 public record ForgotPasswordRequest(string Email);
 public record ResetPasswordRequest(string ResetToken, string NewPassword);
+public record VerifyEmailRequest(string VerifyToken);
+public record ResendVerificationRequest(string Email);

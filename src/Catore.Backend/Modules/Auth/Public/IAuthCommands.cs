@@ -7,4 +7,6 @@ public interface IAuthCommands
     Task Logout(Guid userId);
     Task<bool> RequestPasswordReset(string email);
     Task<bool> ResetPassword(string resetToken, string newPassword);
+    Task<bool> VerifyEmail(string verifyToken);
+    Task<ResendVerificationResultDto> ResendVerification(string email);
 }

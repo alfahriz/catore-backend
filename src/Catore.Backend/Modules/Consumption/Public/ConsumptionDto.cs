@@ -7,3 +7,40 @@ public record DailyTotalDto(
     bool IsFrozen,
     bool HasEntry
 );
+
+public record ConsumptionEntryItemDto(
+    string FoodName,
+    int Calories
+);
+
+public record AddEntriesRequestDto(
+    DateOnly EntryDate,
+    string MealType,
+    DateTime EntryTimestamp,
+    IReadOnlyList<ConsumptionEntryItemDto> Items
+);
+
+public record AddEntriesResultDto(
+    bool Success,
+    string? ErrorMessage,
+    IReadOnlyList<ConsumptionEntrySavedDto> SavedEntries,
+    DailyRecordDto? DailyRecord
+);
+
+public record ConsumptionEntrySavedDto(
+    Guid ConsumptionEntryPk,
+    string FoodName,
+    int Calories,
+    string MealType,
+    DateTime EntryTimestamp
+);
+
+public record DailyRecordDto(
+    DateOnly RecordDate,
+    string DeficitCategory,
+    bool PaToday,
+    decimal EffectiveTdee,
+    decimal EffectiveLimit,
+    bool IsFrozen,
+    int IntakeSum
+);

@@ -9,6 +9,12 @@ internal class AuthService : IAuthQueries, IAuthCommands
     private const int MaxFailedAttempts = 3;
     private static readonly TimeSpan LockoutWindow = TimeSpan.FromMinutes(10);
 
+    private const int MaxPasswordResetRequests = 2;
+    private static readonly TimeSpan PasswordResetWindow = TimeSpan.FromDays(7);
+
+    private static readonly TimeSpan EmailVerificationWindow = TimeSpan.FromMinutes(3);
+    private static readonly TimeSpan ResendVerificationCooldown = TimeSpan.FromSeconds(30);
+
     private readonly AuthRepository _repository;
     private readonly TokenService _tokenService;
     private readonly EmailService _emailService;
@@ -47,19 +53,37 @@ internal class AuthService : IAuthQueries, IAuthCommands
 
     public async Task<SignUpResultDto> SignUp(string email, string password)
     {
-        if (await _repository.EmailExists(email))
+        var existing = await _repository.GetByEmail(email);
+        if (existing is not null)
         {
-            return new SignUpResultDto(false, "Email already registered", null);
+            if (existing.IsEmailVerified)
+            {
+                return new SignUpResultDto(false, "Email already registered", null);
+            }
+
+            if (existing.VerifyTokenExpiry >= DateTime.UtcNow)
+            {
+                return new SignUpResultDto(false, "Email pending verification, check your inbox", null);
+            }
+
+            // Token unverified sudah expired — treat kayak row lama gak pernah ada, timpa.
+            await _repository.Delete(existing);
         }
+
+        var verifyToken = TokenService.GenerateSecureToken();
 
         var account = new UserAccount
         {
             UserAccountPk = Guid.NewGuid(),
             Email = email,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(password)
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
+            IsEmailVerified = false,
+            VerifyToken = verifyToken,
+            VerifyTokenExpiry = DateTime.UtcNow.Add(EmailVerificationWindow)
         };
 
         await _repository.Add(account);
+        await _emailService.SendVerificationEmail(account.Email, verifyToken);
 
         return new SignUpResultDto(true, null, account.UserAccountPk);
     }
@@ -79,6 +103,11 @@ internal class AuthService : IAuthQueries, IAuthCommands
             attempts = _cache.TryGetValue(lockoutKey, out int current) ? current + 1 : 1;
             _cache.Set(lockoutKey, attempts, LockoutWindow);
             return new LoginResultDto(false, "Invalid email or password", null, null);
+        }
+
+        if (!account.IsEmailVerified)
+        {
+            return new LoginResultDto(false, "Please verify your email before logging in", null, null);
         }
 
         _cache.Remove(lockoutKey);
@@ -118,8 +147,17 @@ internal class AuthService : IAuthQueries, IAuthCommands
 
     public async Task<bool> RequestPasswordReset(string email)
     {
+        var resetCountKey = $"reset-request-count:{email}";
+        var requestCount = _cache.TryGetValue(resetCountKey, out int count) ? count : 0;
+        if (requestCount >= MaxPasswordResetRequests)
+        {
+            return false;
+        }
+
         var account = await _repository.GetByEmail(email);
         if (account is null) return false;
+
+        _cache.Set(resetCountKey, requestCount + 1, PasswordResetWindow);
 
         account.ResetToken = TokenService.GenerateSecureToken();
         account.ResetTokenExpiry = DateTime.UtcNow.AddHours(1);
@@ -148,5 +186,48 @@ internal class AuthService : IAuthQueries, IAuthCommands
         await _repository.Update(account);
 
         return true;
+    }
+
+    public async Task<bool> VerifyEmail(string verifyToken)
+    {
+        var account = await _repository.GetByVerifyToken(verifyToken);
+        if (account is null || account.VerifyTokenExpiry < DateTime.UtcNow)
+        {
+            return false;
+        }
+
+        account.IsEmailVerified = true;
+        account.VerifyToken = null;
+        account.VerifyTokenExpiry = null;
+        await _repository.Update(account);
+
+        return true;
+    }
+
+    public async Task<ResendVerificationResultDto> ResendVerification(string email)
+    {
+        var cooldownKey = $"resend-cooldown:{email}";
+        if (_cache.TryGetValue(cooldownKey, out DateTime cooldownUntil) && cooldownUntil > DateTime.UtcNow)
+        {
+            var secondsRemaining = (int)Math.Ceiling((cooldownUntil - DateTime.UtcNow).TotalSeconds);
+            return new ResendVerificationResultDto(false, secondsRemaining);
+        }
+
+        var account = await _repository.GetByEmail(email);
+        if (account is null || account.IsEmailVerified)
+        {
+            return new ResendVerificationResultDto(false, 0);
+        }
+
+        var newCooldownUntil = DateTime.UtcNow.Add(ResendVerificationCooldown);
+        _cache.Set(cooldownKey, newCooldownUntil, ResendVerificationCooldown);
+
+        account.VerifyToken = TokenService.GenerateSecureToken();
+        account.VerifyTokenExpiry = DateTime.UtcNow.Add(EmailVerificationWindow);
+        await _repository.Update(account);
+
+        await _emailService.SendVerificationEmail(account.Email, account.VerifyToken);
+
+        return new ResendVerificationResultDto(true, (int)ResendVerificationCooldown.TotalSeconds);
     }
 }

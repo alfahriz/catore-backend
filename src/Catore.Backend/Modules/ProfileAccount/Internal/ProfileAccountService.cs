@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Catore.Backend.Modules.ProfileAccount.Public;
 using Catore.Backend.Modules.Streak.Public;
 
@@ -6,13 +7,17 @@ namespace Catore.Backend.Modules.ProfileAccount.Internal;
 internal class ProfileAccountService : IProfileAccountQueries, IProfileAccountCommands
 {
     private readonly ProfileAccountRepository _repository;
-    private readonly IStreakQueries _streakQueries;
+    private readonly IServiceProvider _serviceProvider;
 
-    public ProfileAccountService(ProfileAccountRepository repository, IStreakQueries streakQueries)
+    public ProfileAccountService(ProfileAccountRepository repository, IServiceProvider serviceProvider)
     {
         _repository = repository;
-        _streakQueries = streakQueries;
+        _serviceProvider = serviceProvider;
     }
+
+    // Resolve on-demand (bukan constructor injection) — StreakService juga depend balik ke
+    // IProfileAccountQueries (butuh timezone buat derive grace window), circular kalau di-inject langsung.
+    private IStreakQueries StreakQueries => _serviceProvider.GetRequiredService<IStreakQueries>();
 
     public async Task<ProfileAccountSummaryDto?> GetProfileSummary(Guid userId)
     {
@@ -26,6 +31,14 @@ internal class ProfileAccountService : IProfileAccountQueries, IProfileAccountCo
         var profile = await _repository.GetByUserId(userId);
         if (profile is null) return;
         profile.IsUpgraded = true;
+        await _repository.Update(profile);
+    }
+
+    public async Task MarkWiped(Guid userId, DateTime wipedAt)
+    {
+        var profile = await _repository.GetByUserId(userId);
+        if (profile is null) return;
+        profile.LastWipedAt = wipedAt;
         await _repository.Update(profile);
     }
 
@@ -145,9 +158,25 @@ internal class ProfileAccountService : IProfileAccountQueries, IProfileAccountCo
         return isOutdoorOrActiveWork ? "lightly_active" : "sedentary";
     }
 
+    public async Task<EffectiveLimitDto?> CalculateLimit(Guid userId, string deficitCategory, bool paToday)
+    {
+        var profile = await _repository.GetByUserId(userId);
+        if (profile is null) return null;
+
+        var tdee = NutritionCalculator.CalculateTdee(profile.WeightCurrent, profile.Height, profile.Age, profile.Gender, profile.BaselineActivityLevel);
+        var limit = NutritionCalculator.CalculateDailyLimit(tdee, deficitCategory, paToday);
+
+        return new EffectiveLimitDto(Math.Round(tdee, 0), Math.Round(limit, 0));
+    }
+
+    public async Task<IReadOnlyList<Guid>> GetAllActiveUserIds()
+    {
+        return await _repository.GetAllActiveUserIds();
+    }
+
     public async Task<TimezoneRefreshResultDto> RefreshTimezone(Guid userId, string newTimezone)
     {
-        var hasActiveGraceWindow = await _streakQueries.HasActiveGraceWindow(userId);
+        var hasActiveGraceWindow = await StreakQueries.HasActiveGraceWindow(userId);
         if (hasActiveGraceWindow)
         {
             return new TimezoneRefreshResultDto(false, "Timezone cannot be changed while a grace window is active");

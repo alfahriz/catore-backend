@@ -32,6 +32,24 @@ internal class AuthRepository
         return await _db.Set<UserAccount>().FirstOrDefaultAsync(u => u.ResetToken == resetToken);
     }
 
+    public async Task<UserAccount?> GetByVerifyToken(string verifyToken)
+    {
+        return await _db.Set<UserAccount>().FirstOrDefaultAsync(u => u.VerifyToken == verifyToken);
+    }
+
+    public async Task<List<UserAccount>> GetExpiredUnverified(DateTime now)
+    {
+        return await _db.Set<UserAccount>()
+            .Where(u => !u.IsEmailVerified && u.VerifyTokenExpiry != null && u.VerifyTokenExpiry < now)
+            .ToListAsync();
+    }
+
+    public async Task Delete(UserAccount account)
+    {
+        _db.Set<UserAccount>().Remove(account);
+        await _db.SaveChangesAsync();
+    }
+
     public async Task Add(UserAccount account)
     {
         var now = DateTime.UtcNow;

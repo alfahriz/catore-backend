@@ -8,5 +8,7 @@ internal class FreezeState
     public int WipeFreezeCount { get; set; }
     public int DaysSinceLastStreakFreeze { get; set; }
     public int DaysSinceLastWipeFreeze { get; set; }
+    public DateOnly? LastStreakFreezeGainedDate { get; set; }
+    public DateOnly? LastWipeFreezeGainedDate { get; set; }
     public DateTime ModifiedOn { get; set; }
 }

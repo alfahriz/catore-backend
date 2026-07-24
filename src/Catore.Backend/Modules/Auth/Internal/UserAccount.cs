@@ -10,6 +10,9 @@ internal class UserAccount
     public Guid? ActiveSessionId { get; set; }
     public string? ResetToken { get; set; }
     public DateTime? ResetTokenExpiry { get; set; }
+    public bool IsEmailVerified { get; set; }
+    public string? VerifyToken { get; set; }
+    public DateTime? VerifyTokenExpiry { get; set; }
     public DateTime CreatedOn { get; set; }
     public DateTime ModifiedOn { get; set; }
 }

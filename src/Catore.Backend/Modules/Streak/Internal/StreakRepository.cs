@@ -1,0 +1,47 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using Catore.Backend.Infrastructure;
+
+namespace Catore.Backend.Modules.Streak.Internal;
+
+internal class StreakRepository
+{
+    private readonly AppDbContext _db;
+
+    public StreakRepository(AppDbContext db)
+    {
+        _db = db;
+    }
+
+    // Dipakai job wipe-check biar soft-delete lintas-modul (Consumption, WeightTracking) +
+    // reset streak/freeze state jalan dalam 1 transaction per user per run (Section 5.1).
+    public async Task<IDbContextTransaction> BeginTransaction()
+    {
+        return await _db.Database.BeginTransactionAsync();
+    }
+
+    public async Task<StreakState?> GetByUserId(Guid userId)
+    {
+        return await _db.Set<StreakState>().FirstOrDefaultAsync(s => s.UserId == userId);
+    }
+
+    public async Task<List<StreakState>> GetAll()
+    {
+        return await _db.Set<StreakState>().ToListAsync();
+    }
+
+    public async Task<StreakState> Add(StreakState state)
+    {
+        state.ModifiedOn = DateTime.UtcNow;
+        _db.Set<StreakState>().Add(state);
+        await _db.SaveChangesAsync();
+        return state;
+    }
+
+    public async Task Update(StreakState state)
+    {
+        state.ModifiedOn = DateTime.UtcNow;
+        _db.Set<StreakState>().Update(state);
+        await _db.SaveChangesAsync();
+    }
+}

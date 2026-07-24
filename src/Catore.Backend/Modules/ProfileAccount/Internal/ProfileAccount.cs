@@ -17,4 +17,5 @@ internal class ProfileAccount
     public DateTime ModifiedOn { get; set; }
     public bool IsDeleted { get; set; }
     public bool IsUpgraded { get; set; }
+    public DateTime? LastWipedAt { get; set; }
 }
