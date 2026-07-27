@@ -44,3 +44,19 @@ public record DailyRecordDto(
     bool IsFrozen,
     int IntakeSum
 );
+
+public record UpdateDailyRecordRequestDto(
+    string? DeficitCategory,
+    bool? PaToday
+);
+
+public record AutocompleteItemDto(
+    string FoodName,
+    int Calories
+);
+
+public record QuickAddItemDto(
+    string FoodName,
+    int Calories,
+    string MealType
+);

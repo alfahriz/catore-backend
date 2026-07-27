@@ -485,3 +485,6 @@ $RECYCLE.BIN/
 
 # Local dev secrets (connection strings, etc) - never commit
 appsettings.Development.json
+
+# Firebase service account keys - never commit
+*firebase-adminsdk*.json

@@ -50,6 +50,14 @@ internal class ConsumptionRepository
         return entries;
     }
 
+    public async Task<List<ConsumptionEntry>> GetEntriesForDate(Guid userId, DateOnly date)
+    {
+        return await _db.Set<ConsumptionEntry>()
+            .Where(e => e.UserId == userId && e.EntryDate == date && !e.IsDeleted)
+            .OrderBy(e => e.EntryTimestamp)
+            .ToListAsync();
+    }
+
     public async Task<int> GetIntakeSum(Guid userId, DateOnly date)
     {
         return await _db.Set<ConsumptionEntry>()
@@ -87,6 +95,31 @@ internal class ConsumptionRepository
         }
 
         await _db.SaveChangesAsync();
+    }
+
+    public async Task<IReadOnlyList<AutocompleteItemDto>> SearchAutocomplete(Guid userId, string query, int page, int pageSize)
+    {
+        var results = await _db.Set<ConsumptionEntry>()
+            .Where(e => e.UserId == userId && !e.IsDeleted && EF.Functions.ILike(e.FoodName, $"%{query}%"))
+            .GroupBy(e => new { e.FoodName, e.Calories })
+            .OrderBy(g => g.Key.FoodName)
+            .Skip(page * pageSize)
+            .Take(pageSize)
+            .Select(g => new { g.Key.FoodName, g.Key.Calories })
+            .ToListAsync();
+
+        return results.Select(r => new AutocompleteItemDto(r.FoodName, r.Calories)).ToList();
+    }
+
+    public async Task<IReadOnlyList<QuickAddItemDto>> GetQuickAdd(Guid userId, DateOnly yesterday)
+    {
+        var results = await _db.Set<ConsumptionEntry>()
+            .Where(e => e.UserId == userId && !e.IsDeleted && e.EntryDate == yesterday)
+            .GroupBy(e => new { e.FoodName, e.Calories, e.MealType })
+            .Select(g => new { g.Key.FoodName, g.Key.Calories, g.Key.MealType })
+            .ToListAsync();
+
+        return results.Select(r => new QuickAddItemDto(r.FoodName, r.Calories, r.MealType)).ToList();
     }
 
     public async Task<IReadOnlyList<DailyTotalDto>> GetDailyTotalsForRange(Guid userId, DateOnly startDate, DateOnly endDate)

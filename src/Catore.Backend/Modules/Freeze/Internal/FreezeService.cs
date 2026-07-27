@@ -1,4 +1,5 @@
 using Catore.Backend.Modules.Freeze.Public;
+using Catore.Backend.Modules.Notification.Public;
 
 namespace Catore.Backend.Modules.Freeze.Internal;
 
@@ -9,10 +10,12 @@ internal class FreezeService : IFreezeQueries, IFreezeCommands
     private const int WipeFreezeThresholdDays = 60;
 
     private readonly FreezeRepository _repository;
+    private readonly INotificationSender _notificationSender;
 
-    public FreezeService(FreezeRepository repository)
+    public FreezeService(FreezeRepository repository, INotificationSender notificationSender)
     {
         _repository = repository;
+        _notificationSender = notificationSender;
     }
 
     public async Task<FreezeState> GetOrCreate(Guid userId)
@@ -43,11 +46,15 @@ internal class FreezeService : IFreezeQueries, IFreezeCommands
     {
         var state = await GetOrCreate(userId);
 
+        var gainedStreakFreeze = false;
+        var gainedWipeFreeze = false;
+
         state.DaysSinceLastStreakFreeze += 1;
         if (state.DaysSinceLastStreakFreeze % StreakFreezeThresholdDays == 0 && state.StreakFreezeCount < MaxTokens)
         {
             state.StreakFreezeCount += 1;
             state.LastStreakFreezeGainedDate = today;
+            gainedStreakFreeze = true;
         }
 
         state.DaysSinceLastWipeFreeze += 1;
@@ -55,9 +62,13 @@ internal class FreezeService : IFreezeQueries, IFreezeCommands
         {
             state.WipeFreezeCount += 1;
             state.LastWipeFreezeGainedDate = today;
+            gainedWipeFreeze = true;
         }
 
         await _repository.Update(state);
+
+        if (gainedStreakFreeze) await _notificationSender.SendFreezeGainedNotif(userId, "streak");
+        if (gainedWipeFreeze) await _notificationSender.SendFreezeGainedNotif(userId, "wipe");
     }
 
     public async Task<bool> ConsumeStreakFreeze(Guid userId, DateOnly today)

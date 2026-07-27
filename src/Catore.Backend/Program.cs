@@ -1,4 +1,6 @@
 using System.Text;
+using FirebaseAdmin;
+using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -9,6 +11,8 @@ using Catore.Backend.Modules.Consumption.Internal;
 using Catore.Backend.Modules.Consumption.Public;
 using Catore.Backend.Modules.Freeze.Internal;
 using Catore.Backend.Modules.Freeze.Public;
+using Catore.Backend.Modules.Log.Internal;
+using Catore.Backend.Modules.Log.Public;
 using Catore.Backend.Modules.Notification.Internal;
 using Catore.Backend.Modules.Notification.Public;
 using Catore.Backend.Modules.ProfileAccount.Internal;
@@ -54,6 +58,12 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+var firebaseKeyPath = builder.Configuration["Firebase:ServiceAccountKeyPath"]!;
+FirebaseApp.Create(new AppOptions
+{
+    Credential = GoogleCredential.FromFile(firebaseKeyPath)
+});
 
 builder.Services.AddMemoryCache();
 
@@ -102,6 +112,10 @@ builder.Services.AddScoped<WeightTrackingRepository>();
 builder.Services.AddScoped<WeightTrackingService>();
 builder.Services.AddScoped<IWeightTrackingQueries>(sp => sp.GetRequiredService<WeightTrackingService>());
 builder.Services.AddScoped<IWeightTrackingCommands>(sp => sp.GetRequiredService<WeightTrackingService>());
+
+// Modul Log (agregasi doang, gak punya tabel sendiri)
+builder.Services.AddScoped<LogService>();
+builder.Services.AddScoped<ILogQueries>(sp => sp.GetRequiredService<LogService>());
 
 var jwtSecret = builder.Configuration["Jwt:Secret"]!;
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

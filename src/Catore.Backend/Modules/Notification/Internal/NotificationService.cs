@@ -1,9 +1,8 @@
+using FirebaseAdmin.Messaging;
 using Catore.Backend.Modules.Notification.Public;
 
 namespace Catore.Backend.Modules.Notification.Internal;
 
-// STUB: belum kirim FCM asli, cuma log ke console.
-// TODO: integrasi Firebase Admin SDK buat kirim push notification beneran.
 internal class NotificationService : INotificationSender, INotificationCommands
 {
     private readonly NotificationRepository _repository;
@@ -20,57 +19,82 @@ internal class NotificationService : INotificationSender, INotificationCommands
         await _repository.UpsertFcmToken(userId, fcmToken);
     }
 
+    // fcmtoken NULL/belum ada -> skip diam-diam, gak block flow (keputusan lama: fire-and-forget).
+    private async Task SendPush(Guid userId, string title, string body, string? deepLink = null)
+    {
+        var subscription = await _repository.GetByUserId(userId);
+        if (subscription is null || string.IsNullOrEmpty(subscription.FcmToken))
+        {
+            _logger.LogInformation("Skip push to {UserId} — no fcmtoken registered", userId);
+            return;
+        }
+
+        var message = new Message
+        {
+            Token = subscription.FcmToken,
+            Notification = new FirebaseAdmin.Messaging.Notification { Title = title, Body = body },
+            Data = deepLink is not null ? new Dictionary<string, string> { ["deepLink"] = deepLink } : null
+        };
+
+        try
+        {
+            var messageId = await FirebaseMessaging.DefaultInstance.SendAsync(message);
+            _logger.LogInformation("Push sent to {UserId}, messageId={MessageId}", userId, messageId);
+        }
+        catch (FirebaseMessagingException ex)
+        {
+            _logger.LogWarning(ex, "Push failed to {UserId}: {ErrorCode}", userId, ex.MessagingErrorCode);
+        }
+    }
+
     public Task SendDailyReminder(Guid userId, bool includeSafetyFloorWarning)
     {
-        _logger.LogInformation("[STUB] SendDailyReminder to {UserId}, safetyFloorWarning={Warning}", userId, includeSafetyFloorWarning);
-        return Task.CompletedTask;
+        var body = includeSafetyFloorWarning
+            ? "Don't forget to log today — your limit is close to the safety floor."
+            : "Don't forget to log your meals today.";
+        return SendPush(userId, "Daily reminder", body);
     }
 
     public Task SendGraceWindowCountdown(Guid userId, IReadOnlyList<DateOnly> outstandingDates, DateOnly oldestDeadline)
     {
-        _logger.LogInformation("[STUB] SendGraceWindowCountdown to {UserId}, dates={Dates}, deadline={Deadline}", userId, outstandingDates, oldestDeadline);
-        return Task.CompletedTask;
+        var body = $"You have {outstandingDates.Count} day(s) missing. Log by {oldestDeadline:MMM d} to keep your streak.";
+        return SendPush(userId, "Grace window active", body);
     }
 
     public Task SendWipeNotif(Guid userId)
     {
-        _logger.LogInformation("[STUB] SendWipeNotif to {UserId}", userId);
-        return Task.CompletedTask;
+        return SendPush(userId, "Account wiped", "Your data has been reset after missing the grace window.");
     }
 
     public Task SendForceLogoutNotif(Guid userId)
     {
-        _logger.LogInformation("[STUB] SendForceLogoutNotif to {UserId}", userId);
-        return Task.CompletedTask;
+        return SendPush(userId, "Logged out", "Your account was signed in on another device.");
     }
 
     public Task SendFreezeUsedNotif(Guid userId, string freezeType, int remaining)
     {
-        _logger.LogInformation("[STUB] SendFreezeUsedNotif to {UserId}, type={Type}, remaining={Remaining}", userId, freezeType, remaining);
-        return Task.CompletedTask;
+        var label = freezeType == "streak" ? "Streak Freeze" : "Wipe Freeze";
+        return SendPush(userId, $"{label} used", $"{label} was used automatically. {remaining} remaining.");
     }
 
     public Task SendFreezeGainedNotif(Guid userId, string freezeType)
     {
-        _logger.LogInformation("[STUB] SendFreezeGainedNotif to {UserId}, type={Type}", userId, freezeType);
-        return Task.CompletedTask;
+        var label = freezeType == "streak" ? "Streak Freeze" : "Wipe Freeze";
+        return SendPush(userId, $"{label} earned", $"You've earned a new {label} token.");
     }
 
     public Task SendPasswordResetRequestedNotif(Guid userId)
     {
-        _logger.LogInformation("[STUB] SendPasswordResetRequestedNotif to {UserId}", userId);
-        return Task.CompletedTask;
+        return SendPush(userId, "Password reset requested", "Check your email to reset your password.");
     }
 
     public Task SendWeighInReminder(Guid userId)
     {
-        _logger.LogInformation("[STUB] SendWeighInReminder to {UserId}", userId);
-        return Task.CompletedTask;
+        return SendPush(userId, "Weigh-in reminder", "Don't forget to log your weight this week.");
     }
 
     public Task SendGoalAchievedNotif(Guid userId, int frozenStreakCount)
     {
-        _logger.LogInformation("[STUB] SendGoalAchievedNotif to {UserId}, streak={Streak}", userId, frozenStreakCount);
-        return Task.CompletedTask;
+        return SendPush(userId, "Goal achieved!", $"Congratulations, you've reached your goal weight. Your streak ({frozenStreakCount}) is now frozen.");
     }
 }

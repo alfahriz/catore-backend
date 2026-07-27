@@ -70,6 +70,19 @@ internal class StreakService : IStreakQueries, IStreakCommands
         return GraceWindowHelper.GetMissingDates(signupDate, today, loggedDates, timezone);
     }
 
+    public async Task<StreakSummaryDto> GetStreakSummary(Guid userId)
+    {
+        var state = await GetOrCreate(userId);
+        var tokens = await _freezeQueries.GetAvailableTokens(userId);
+
+        return new StreakSummaryDto(
+            state.CurrentStreakCount,
+            state.LastLoggedDate,
+            state.StreakIsFrozen,
+            tokens?.StreakFreezeCount ?? 0,
+            tokens?.WipeFreezeCount ?? 0);
+    }
+
     public async Task<StreakState> GetOrCreate(Guid userId)
     {
         var state = await _repository.GetByUserId(userId);
