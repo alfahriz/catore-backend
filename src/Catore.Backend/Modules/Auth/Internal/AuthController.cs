@@ -36,7 +36,7 @@ public class AuthController : ControllerBase
             return BadRequest(new { error = result.ErrorMessage });
         }
 
-        return Ok(new { userAccountPk = result.UserAccountPk });
+        return Ok(new { userPk = result.UserPk });
     }
 
     [AllowAnonymous]
@@ -57,7 +57,7 @@ public class AuthController : ControllerBase
     [HttpPost("logout")]
     public async Task<IActionResult> Logout()
     {
-        var userId = Guid.Parse(User.FindFirstValue("userid")!);
+        var userId = long.Parse(User.FindFirstValue("userid")!);
         await _authCommands.Logout(userId);
         return Ok();
     }

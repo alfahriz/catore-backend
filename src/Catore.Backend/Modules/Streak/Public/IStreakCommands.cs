@@ -2,6 +2,6 @@ namespace Catore.Backend.Modules.Streak.Public;
 
 public interface IStreakCommands
 {
-    Task FreezeStreak(Guid userId);
-    Task RecordDailyLog(Guid userId, DateOnly date);
+    Task FreezeStreak(long userId);
+    Task RecordDailyLog(long userId, DateOnly date);
 }

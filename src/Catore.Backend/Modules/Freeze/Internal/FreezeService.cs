@@ -18,14 +18,13 @@ internal class FreezeService : IFreezeQueries, IFreezeCommands
         _notificationSender = notificationSender;
     }
 
-    public async Task<FreezeState> GetOrCreate(Guid userId)
+    public async Task<TFreeze> GetOrCreate(long userId)
     {
         var state = await _repository.GetByUserId(userId);
         if (state is not null) return state;
 
-        var newState = new FreezeState
+        var newState = new TFreeze
         {
-            FreezeStatePk = Guid.NewGuid(),
             UserId = userId,
             StreakFreezeCount = 0,
             WipeFreezeCount = 0,
@@ -35,14 +34,14 @@ internal class FreezeService : IFreezeQueries, IFreezeCommands
         return await _repository.Add(newState);
     }
 
-    public async Task<FreezeTokenSummaryDto?> GetAvailableTokens(Guid userId)
+    public async Task<FreezeTokenSummaryDto?> GetAvailableTokens(long userId)
     {
         var state = await _repository.GetByUserId(userId);
         if (state is null) return null;
         return new FreezeTokenSummaryDto(state.StreakFreezeCount, state.WipeFreezeCount);
     }
 
-    public async Task IncrementDaysSinceLastFreeze(Guid userId, DateOnly today)
+    public async Task IncrementDaysSinceLastFreeze(long userId, DateOnly today)
     {
         var state = await GetOrCreate(userId);
 
@@ -71,7 +70,7 @@ internal class FreezeService : IFreezeQueries, IFreezeCommands
         if (gainedWipeFreeze) await _notificationSender.SendFreezeGainedNotif(userId, "wipe");
     }
 
-    public async Task<bool> ConsumeStreakFreeze(Guid userId, DateOnly today)
+    public async Task<bool> ConsumeStreakFreeze(long userId, DateOnly today)
     {
         var state = await GetOrCreate(userId);
 
@@ -84,7 +83,7 @@ internal class FreezeService : IFreezeQueries, IFreezeCommands
         return true;
     }
 
-    public async Task<bool> ConsumeWipeFreeze(Guid userId, DateOnly today)
+    public async Task<bool> ConsumeWipeFreeze(long userId, DateOnly today)
     {
         var state = await GetOrCreate(userId);
 
@@ -97,7 +96,7 @@ internal class FreezeService : IFreezeQueries, IFreezeCommands
         return true;
     }
 
-    public async Task ResetAfterWipe(Guid userId)
+    public async Task ResetAfterWipe(long userId)
     {
         var state = await GetOrCreate(userId);
         state.StreakFreezeCount = 0;

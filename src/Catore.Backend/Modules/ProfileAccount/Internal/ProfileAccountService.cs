@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Catore.Backend.Modules.Param.Public;
 using Catore.Backend.Modules.ProfileAccount.Public;
 using Catore.Backend.Modules.Streak.Public;
 
@@ -6,12 +7,18 @@ namespace Catore.Backend.Modules.ProfileAccount.Internal;
 
 internal class ProfileAccountService : IProfileAccountQueries, IProfileAccountCommands
 {
+    private const string GenderParamType = "GENDER";
+    private const string ActivityLevelParamType = "ACTIVITY_LEVEL";
+    private const string MetricUnitParamType = "METRIC_UNIT";
+
     private readonly ProfileAccountRepository _repository;
+    private readonly IParamQueries _paramQueries;
     private readonly IServiceProvider _serviceProvider;
 
-    public ProfileAccountService(ProfileAccountRepository repository, IServiceProvider serviceProvider)
+    public ProfileAccountService(ProfileAccountRepository repository, IParamQueries paramQueries, IServiceProvider serviceProvider)
     {
         _repository = repository;
+        _paramQueries = paramQueries;
         _serviceProvider = serviceProvider;
     }
 
@@ -19,14 +26,14 @@ internal class ProfileAccountService : IProfileAccountQueries, IProfileAccountCo
     // IProfileAccountQueries (butuh timezone buat derive grace window), circular kalau di-inject langsung.
     private IStreakQueries StreakQueries => _serviceProvider.GetRequiredService<IStreakQueries>();
 
-    public async Task<ProfileAccountSummaryDto?> GetProfileSummary(Guid userId)
+    public async Task<ProfileAccountSummaryDto?> GetProfileSummary(long userId)
     {
         var profile = await _repository.GetByUserId(userId);
         if (profile is null) return null;
         return new ProfileAccountSummaryDto(profile.Timezone, profile.GoalWeight, profile.IsUpgraded);
     }
 
-    public async Task SetUpgraded(Guid userId)
+    public async Task SetUpgraded(long userId)
     {
         var profile = await _repository.GetByUserId(userId);
         if (profile is null) return;
@@ -34,34 +41,38 @@ internal class ProfileAccountService : IProfileAccountQueries, IProfileAccountCo
         await _repository.Update(profile);
     }
 
-    public async Task MarkWiped(Guid userId, DateTime wipedAt)
+    public async Task MarkWiped(long userId, DateTime wipedAt)
     {
         var profile = await _repository.GetByUserId(userId);
         if (profile is null) return;
-        profile.LastWipedAt = wipedAt;
+        profile.LastWipeOn = wipedAt;
         await _repository.Update(profile);
     }
 
-    public async Task<ProfileFullDto?> GetFullProfile(Guid userId)
+    public async Task<ProfileFullDto?> GetFullProfile(long userId)
     {
         var profile = await _repository.GetByUserId(userId);
         if (profile is null) return null;
 
-        var tdee = NutritionCalculator.CalculateTdee(profile.WeightCurrent, profile.Height, profile.Age, profile.Gender, profile.BaselineActivityLevel);
-        var bmi = NutritionCalculator.CalculateBmi(profile.WeightCurrent, profile.Height);
+        var genderName = await _paramQueries.ResolveName(profile.Gender) ?? string.Empty;
+        var activityLevelName = await _paramQueries.ResolveName(profile.BaseActLevel) ?? string.Empty;
+        var metricParamName = await _paramQueries.ResolveName(profile.MetricParam) ?? string.Empty;
+
+        var tdee = NutritionCalculator.CalculateTdee(profile.Weight, profile.Height, profile.Age, genderName, activityLevelName);
+        var bmi = NutritionCalculator.CalculateBmi(profile.Weight, profile.Height);
         var bmiCategory = NutritionCalculator.GetBmiCategory(bmi);
         var categoryLimits = NutritionCalculator.CalculateAllCategoryLimits(tdee, paToday: false);
 
         return new ProfileFullDto(
             profile.Height,
-            profile.WeightCurrent,
+            profile.Weight,
             profile.Age,
-            profile.Gender,
-            profile.DisplayName,
-            profile.BaselineActivityLevel,
+            genderName,
+            profile.Name,
+            activityLevelName,
             profile.GoalWeight,
-            profile.GoalWeightIsManual,
-            profile.MetricPreference,
+            !profile.IsRecomendGoalUsed,
+            metricParamName,
             profile.Timezone,
             profile.IsUpgraded,
             Math.Round(tdee, 0),
@@ -71,16 +82,15 @@ internal class ProfileAccountService : IProfileAccountQueries, IProfileAccountCo
         );
     }
 
-    public async Task<UpdateProfileResultDto> UpdateProfile(Guid userId, UpdateProfileRequestDto request)
+    public async Task<UpdateProfileResultDto> UpdateProfile(long userId, UpdateProfileRequestDto request)
     {
         var profile = await _repository.GetByUserId(userId);
         var isNew = profile is null;
 
         if (profile is null)
         {
-            profile = new ProfileAccount
+            profile = new MProfile
             {
-                ProfileAccountPk = Guid.NewGuid(),
                 UserId = userId
             };
         }
@@ -88,7 +98,7 @@ internal class ProfileAccountService : IProfileAccountQueries, IProfileAccountCo
         // Validasi goal weight (kalau diisi)
         if (request.GoalWeight.HasValue)
         {
-            var currentWeight = request.WeightCurrent ?? profile.WeightCurrent;
+            var currentWeight = request.WeightCurrent ?? profile.Weight;
             var height = request.Height ?? profile.Height;
 
             if (request.GoalWeight.Value >= currentWeight)
@@ -104,22 +114,25 @@ internal class ProfileAccountService : IProfileAccountQueries, IProfileAccountCo
         }
 
         if (request.Height.HasValue) profile.Height = request.Height.Value;
-        if (request.WeightCurrent.HasValue) profile.WeightCurrent = request.WeightCurrent.Value;
+        if (request.WeightCurrent.HasValue) profile.Weight = request.WeightCurrent.Value;
         if (request.Age.HasValue) profile.Age = request.Age.Value;
-        if (request.Gender is not null) profile.Gender = request.Gender;
-        if (request.DisplayName is not null) profile.DisplayName = request.DisplayName;
+        if (request.Gender is not null) profile.Gender = await _paramQueries.ResolvePk(GenderParamType, request.Gender);
+        if (request.DisplayName is not null) profile.Name = request.DisplayName;
         if (request.GoalWeight.HasValue)
         {
             profile.GoalWeight = request.GoalWeight.Value;
-            profile.GoalWeightIsManual = true;
+            profile.IsRecomendGoalUsed = false;
         }
-        if (request.MetricPreference is not null) profile.MetricPreference = request.MetricPreference;
+        if (request.MetricPreference is not null) profile.MetricParam = await _paramQueries.ResolvePk(MetricUnitParamType, request.MetricPreference);
         if (request.Timezone is not null) profile.Timezone = request.Timezone;
 
         profile.ModifiedOn = DateTime.UtcNow;
+        profile.ModifiedBy = userId.ToString();
 
         if (isNew)
         {
+            profile.CreatedOn = DateTime.UtcNow;
+            profile.CreatedBy = userId;
             await _repository.Add(profile);
         }
         else
@@ -130,7 +143,7 @@ internal class ProfileAccountService : IProfileAccountQueries, IProfileAccountCo
         return new UpdateProfileResultDto(true, null);
     }
 
-    public async Task<ActivityAssessmentResultDto> SubmitActivityAssessment(Guid userId, string workEnvironment, string exerciseFrequency)
+    public async Task<ActivityAssessmentResultDto> SubmitActivityAssessment(long userId, string workEnvironment, string exerciseFrequency)
     {
         var level = MapActivityAssessment(workEnvironment, exerciseFrequency);
 
@@ -140,7 +153,7 @@ internal class ProfileAccountService : IProfileAccountQueries, IProfileAccountCo
             return new ActivityAssessmentResultDto(false, level);
         }
 
-        profile.BaselineActivityLevel = level;
+        profile.BaseActLevel = await _paramQueries.ResolvePk(ActivityLevelParamType, level);
         await _repository.Update(profile);
 
         return new ActivityAssessmentResultDto(true, level);
@@ -152,29 +165,32 @@ internal class ProfileAccountService : IProfileAccountQueries, IProfileAccountCo
         var isOutdoorOrActiveWork = workEnvironment.Equals("outdoor", StringComparison.OrdinalIgnoreCase);
         var exerciseDays = int.TryParse(exerciseFrequency, out var days) ? days : 0;
 
-        if (exerciseDays >= 6) return "very_active";
-        if (exerciseDays >= 3) return isOutdoorOrActiveWork ? "very_active" : "moderately_active";
-        if (exerciseDays >= 1) return isOutdoorOrActiveWork ? "moderately_active" : "lightly_active";
-        return isOutdoorOrActiveWork ? "lightly_active" : "sedentary";
+        if (exerciseDays >= 6) return "Very active";
+        if (exerciseDays >= 3) return isOutdoorOrActiveWork ? "Very active" : "Moderately active";
+        if (exerciseDays >= 1) return isOutdoorOrActiveWork ? "Moderately active" : "Lightly active";
+        return isOutdoorOrActiveWork ? "Lightly active" : "Sedentary";
     }
 
-    public async Task<EffectiveLimitDto?> CalculateLimit(Guid userId, string deficitCategory, bool paToday)
+    public async Task<EffectiveLimitDto?> CalculateLimit(long userId, string deficitCategory, bool paToday)
     {
         var profile = await _repository.GetByUserId(userId);
         if (profile is null) return null;
 
-        var tdee = NutritionCalculator.CalculateTdee(profile.WeightCurrent, profile.Height, profile.Age, profile.Gender, profile.BaselineActivityLevel);
+        var genderName = await _paramQueries.ResolveName(profile.Gender) ?? string.Empty;
+        var activityLevelName = await _paramQueries.ResolveName(profile.BaseActLevel) ?? string.Empty;
+
+        var tdee = NutritionCalculator.CalculateTdee(profile.Weight, profile.Height, profile.Age, genderName, activityLevelName);
         var limit = NutritionCalculator.CalculateDailyLimit(tdee, deficitCategory, paToday);
 
         return new EffectiveLimitDto(Math.Round(tdee, 0), Math.Round(limit, 0));
     }
 
-    public async Task<IReadOnlyList<Guid>> GetAllActiveUserIds()
+    public async Task<IReadOnlyList<long>> GetAllActiveUserIds()
     {
         return await _repository.GetAllActiveUserIds();
     }
 
-    public async Task<TimezoneRefreshResultDto> RefreshTimezone(Guid userId, string newTimezone)
+    public async Task<TimezoneRefreshResultDto> RefreshTimezone(long userId, string newTimezone)
     {
         var hasActiveGraceWindow = await StreakQueries.HasActiveGraceWindow(userId);
         if (hasActiveGraceWindow)

@@ -1,11 +1,11 @@
 namespace Catore.Backend.Modules.Streak.Internal;
 
-internal class StreakState
+internal class TStreak
 {
-    public Guid StreakStatePk { get; set; }
-    public Guid UserId { get; set; }
-    public int CurrentStreakCount { get; set; }
+    public long StreakPk { get; set; }
+    public long UserId { get; set; }
+    public int CurrentStreak { get; set; }
     public DateOnly? LastLoggedDate { get; set; }
-    public bool StreakIsFrozen { get; set; }
+    public bool IsStreakFrozen { get; set; }
     public DateTime ModifiedOn { get; set; }
 }

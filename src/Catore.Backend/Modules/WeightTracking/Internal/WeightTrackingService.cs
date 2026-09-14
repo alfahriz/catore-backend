@@ -31,22 +31,25 @@ internal class WeightTrackingService : IWeightTrackingQueries, IWeightTrackingCo
     private IStreakCommands StreakCommands => _serviceProvider.GetRequiredService<IStreakCommands>();
     private IStreakQueries StreakQueries => _serviceProvider.GetRequiredService<IStreakQueries>();
 
-    public async Task<IReadOnlyList<WeightEntryDto>> GetWeightHistory(Guid userId, DateOnly startDate, DateOnly endDate)
+    public async Task<IReadOnlyList<WeightEntryDto>> GetWeightHistory(long userId, DateOnly startDate, DateOnly endDate)
     {
         var entries = await _repository.GetByUserIdAndRange(userId, startDate, endDate);
         return entries
-            .Select(e => new WeightEntryDto(DateOnly.FromDateTime(e.LoggedAt), e.WeightValue))
+            .Select(e => new WeightEntryDto(e.CheckpointDate, e.Weight))
             .ToList();
     }
 
-    public async Task WipeUserData(Guid userId, DateTime wipedAt)
+    public async Task WipeUserData(long userId, DateTime wipedAt)
     {
         await _repository.WipeUserData(userId, wipedAt);
     }
 
     // Section 4.3: max 1 entry/hari, log ulang hari sama = update (edit), bukan insert baru.
     // Section 5.7: Goal Achieved trigger check dalam request yang sama, 1 DB transaction bareng insert/update weightlog.
-    public async Task<AddWeightLogResultDto> AddOrUpdateWeightLog(Guid userId, DateTime entryTimestamp, decimal weightValue)
+    // CATATAN: checkpointDate di sini masih dipakai sbg "tanggal hari itu" (pola LAMA),
+    // BELUM implementasi logic upsert mingguan (checkpoint Jumat + carry-forward) yg
+    // direncanakan di schema-curation -- itu logic baru yg sengaja ditunda.
+    public async Task<AddWeightLogResultDto> AddOrUpdateWeightLog(long userId, DateTime entryTimestamp, decimal weightValue)
     {
         var profile = await _profileQueries.GetProfileSummary(userId);
         if (profile is null)
@@ -62,17 +65,16 @@ internal class WeightTrackingService : IWeightTrackingQueries, IWeightTrackingCo
             var existing = await _repository.GetByUserIdAndDate(userId, date);
             if (existing is not null)
             {
-                existing.WeightValue = weightValue;
+                existing.Weight = weightValue;
                 await _repository.Update(existing);
             }
             else
             {
-                await _repository.Add(new WeightLog
+                await _repository.Add(new TWeightLog
                 {
-                    WeightLogPk = Guid.NewGuid(),
                     UserId = userId,
-                    WeightValue = weightValue,
-                    LoggedAt = entryTimestamp
+                    Weight = weightValue,
+                    CheckpointDate = date
                 });
             }
 

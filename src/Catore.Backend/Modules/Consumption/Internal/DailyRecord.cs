@@ -1,15 +1,16 @@
 namespace Catore.Backend.Modules.Consumption.Internal;
 
-internal class DailyRecord
+internal class TDailyRecord
 {
-    public Guid DailyRecordPk { get; set; }
-    public Guid UserId { get; set; }
+    public long DailyRecordPk { get; set; }
+    public long UserId { get; set; }
     public DateOnly RecordDate { get; set; }
-    public string DeficitCategory { get; set; } = string.Empty;
+    public long? DeficitCategory { get; set; }
     public bool PaToday { get; set; }
     public decimal EffectiveTdee { get; set; }
     public decimal EffectiveLimit { get; set; }
-    public string CreatedVia { get; set; } = string.Empty;
+    public int ActualCalories { get; set; }
+    public long? CreatedVia { get; set; }
     public bool IsFrozen { get; set; }
     public DateTime ModifiedOn { get; set; }
     public bool IsDeleted { get; set; }

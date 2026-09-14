@@ -12,57 +12,60 @@ internal class AuthRepository
         _db = db;
     }
 
-    public async Task<UserAccount?> GetByEmail(string email)
+    public async Task<MUser?> GetByEmail(string email)
     {
-        return await _db.Set<UserAccount>().FirstOrDefaultAsync(u => u.Email == email);
+        return await _db.Set<MUser>().FirstOrDefaultAsync(u => u.Email == email);
     }
 
-    public async Task<UserAccount?> GetById(Guid userAccountPk)
+    public async Task<MUser?> GetById(long userPk)
     {
-        return await _db.Set<UserAccount>().FirstOrDefaultAsync(u => u.UserAccountPk == userAccountPk);
+        return await _db.Set<MUser>().FirstOrDefaultAsync(u => u.UserPk == userPk);
     }
 
     public async Task<bool> EmailExists(string email)
     {
-        return await _db.Set<UserAccount>().AnyAsync(u => u.Email == email);
+        return await _db.Set<MUser>().AnyAsync(u => u.Email == email);
     }
 
-    public async Task<UserAccount?> GetByResetToken(string resetToken)
+    public async Task<MUser?> GetByResetToken(string resetToken)
     {
-        return await _db.Set<UserAccount>().FirstOrDefaultAsync(u => u.ResetToken == resetToken);
+        return await _db.Set<MUser>().FirstOrDefaultAsync(u => u.ResetToken == resetToken);
     }
 
-    public async Task<UserAccount?> GetByVerifyToken(string verifyToken)
+    public async Task<MUser?> GetByVerifyToken(string verifyToken)
     {
-        return await _db.Set<UserAccount>().FirstOrDefaultAsync(u => u.VerifyToken == verifyToken);
+        return await _db.Set<MUser>().FirstOrDefaultAsync(u => u.EmailVerifiedToken == verifyToken);
     }
 
-    public async Task<List<UserAccount>> GetExpiredUnverified(DateTime now)
+    public async Task<List<MUser>> GetExpiredUnverified(DateTime now)
     {
-        return await _db.Set<UserAccount>()
-            .Where(u => !u.IsEmailVerified && u.VerifyTokenExpiry != null && u.VerifyTokenExpiry < now)
+        return await _db.Set<MUser>()
+            .Where(u => !u.IsEmailVerif && u.EmailVerifiedTokenExpiredAt != null && u.EmailVerifiedTokenExpiredAt < now)
             .ToListAsync();
     }
 
-    public async Task Delete(UserAccount account)
+    public async Task Delete(MUser account)
     {
-        _db.Set<UserAccount>().Remove(account);
+        _db.Set<MUser>().Remove(account);
         await _db.SaveChangesAsync();
     }
 
-    public async Task Add(UserAccount account)
+    public async Task Add(MUser account)
     {
         var now = DateTime.UtcNow;
         account.CreatedOn = now;
         account.ModifiedOn = now;
-        _db.Set<UserAccount>().Add(account);
+        _db.Set<MUser>().Add(account);
+        await _db.SaveChangesAsync();
+        account.CreatedBy = account.UserPk;
         await _db.SaveChangesAsync();
     }
 
-    public async Task Update(UserAccount account)
+    public async Task Update(MUser account)
     {
         account.ModifiedOn = DateTime.UtcNow;
-        _db.Set<UserAccount>().Update(account);
+        account.ModifiedBy = account.UserPk.ToString();
+        _db.Set<MUser>().Update(account);
         await _db.SaveChangesAsync();
     }
 }

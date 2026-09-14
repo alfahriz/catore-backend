@@ -1,11 +1,15 @@
 namespace Catore.Backend.Modules.WeightTracking.Internal;
 
-internal class WeightLog
+// Kolom checkpointDate (rename dari loggedAt lama) -- LOGIC service tetap "1 entry per
+// hari via tanggal" (sama seperti sebelumnya), BELUM implementasi upsert mingguan
+// (checkpoint Jumat, carry-forward) yang direncanakan di schema-curation. Itu logic
+// baru yang sengaja ditunda ke sesi terpisah — jangan diasumsikan sudah jalan.
+internal class TWeightLog
 {
-    public Guid WeightLogPk { get; set; }
-    public Guid UserId { get; set; }
-    public decimal WeightValue { get; set; }
-    public DateTime LoggedAt { get; set; }
+    public long WeightLogPk { get; set; }
+    public long UserId { get; set; }
+    public DateOnly CheckpointDate { get; set; }
+    public decimal Weight { get; set; }
     public DateTime CreatedOn { get; set; }
     public DateTime? ModifiedOn { get; set; }
     public bool IsDeleted { get; set; }

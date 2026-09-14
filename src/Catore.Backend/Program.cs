@@ -15,6 +15,8 @@ using Catore.Backend.Modules.Log.Internal;
 using Catore.Backend.Modules.Log.Public;
 using Catore.Backend.Modules.Notification.Internal;
 using Catore.Backend.Modules.Notification.Public;
+using Catore.Backend.Modules.Param.Internal;
+using Catore.Backend.Modules.Param.Public;
 using Catore.Backend.Modules.ProfileAccount.Internal;
 using Catore.Backend.Modules.ProfileAccount.Public;
 using Catore.Backend.Modules.Streak.Internal;
@@ -81,6 +83,11 @@ builder.Services.AddScoped<NotificationRepository>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<INotificationSender>(sp => sp.GetRequiredService<NotificationService>());
 builder.Services.AddScoped<INotificationCommands>(sp => sp.GetRequiredService<NotificationService>());
+
+// Modul Param (lookup generik: mparam + mparamnotif)
+builder.Services.AddScoped<ParamRepository>();
+builder.Services.AddScoped<ParamService>();
+builder.Services.AddScoped<IParamQueries>(sp => sp.GetRequiredService<ParamService>());
 
 // Modul Freeze
 builder.Services.AddScoped<FreezeRepository>();

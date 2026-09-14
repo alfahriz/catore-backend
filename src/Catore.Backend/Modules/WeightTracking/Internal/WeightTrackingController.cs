@@ -19,7 +19,7 @@ public class WeightTrackingController : ControllerBase
         _commands = commands;
     }
 
-    private Guid CurrentUserId => Guid.Parse(User.FindFirstValue("userid")!);
+    private long CurrentUserId => long.Parse(User.FindFirstValue("userid")!);
 
     [HttpPost]
     public async Task<IActionResult> AddWeightLog([FromBody] AddWeightLogRequestDto request)

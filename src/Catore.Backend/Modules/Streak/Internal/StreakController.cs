@@ -17,7 +17,7 @@ public class StreakController : ControllerBase
         _queries = queries;
     }
 
-    private Guid CurrentUserId => Guid.Parse(User.FindFirstValue("userid")!);
+    private long CurrentUserId => long.Parse(User.FindFirstValue("userid")!);
 
     [HttpGet]
     public async Task<IActionResult> GetStreakSummary()

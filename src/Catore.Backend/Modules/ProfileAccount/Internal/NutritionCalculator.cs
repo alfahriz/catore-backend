@@ -2,26 +2,29 @@ namespace Catore.Backend.Modules.ProfileAccount.Internal;
 
 internal static class NutritionCalculator
 {
+    // Key dictionary ini Title Case, SAMA PERSIS dengan mparam.name (seed.sql) — supaya
+    // caller (ProfileAccountService dkk) bisa lempar nama hasil resolve mparam LANGSUNG
+    // tanpa perlu translasi format tambahan.
     private static readonly Dictionary<string, decimal> ActivityMultipliers = new()
     {
-        ["sedentary"] = 1.2m,
-        ["lightly_active"] = 1.375m,
-        ["moderately_active"] = 1.55m,
-        ["very_active"] = 1.725m
+        ["Sedentary"] = 1.2m,
+        ["Lightly active"] = 1.375m,
+        ["Moderately active"] = 1.55m,
+        ["Very active"] = 1.725m
     };
 
     private static readonly Dictionary<string, int> CategoryOffsets = new()
     {
-        ["recovery"] = 0,
-        ["soft"] = -300,
-        ["mid"] = -400,
-        ["hard"] = -500
+        ["Recovery"] = 0,
+        ["Soft"] = -300,
+        ["Mid"] = -400,
+        ["Hard"] = -500
     };
 
     public static decimal CalculateBmr(decimal weightKg, decimal heightCm, int age, string gender)
     {
         var baseBmr = 10 * weightKg + 6.25m * heightCm - 5 * age;
-        return gender.Equals("male", StringComparison.OrdinalIgnoreCase) ? baseBmr + 5 : baseBmr - 161;
+        return gender.Equals("Male", StringComparison.OrdinalIgnoreCase) ? baseBmr + 5 : baseBmr - 161;
     }
 
     public static decimal CalculateTdee(decimal weightKg, decimal heightCm, int age, string gender, string baselineActivityLevel)

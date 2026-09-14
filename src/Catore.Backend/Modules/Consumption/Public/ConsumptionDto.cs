@@ -14,7 +14,6 @@ public record ConsumptionEntryItemDto(
 );
 
 public record AddEntriesRequestDto(
-    DateOnly EntryDate,
     string MealType,
     DateTime EntryTimestamp,
     IReadOnlyList<ConsumptionEntryItemDto> Items
@@ -28,7 +27,7 @@ public record AddEntriesResultDto(
 );
 
 public record ConsumptionEntrySavedDto(
-    Guid ConsumptionEntryPk,
+    long EntryPk,
     string FoodName,
     int Calories,
     string MealType,

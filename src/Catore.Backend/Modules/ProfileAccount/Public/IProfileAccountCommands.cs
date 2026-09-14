@@ -2,9 +2,9 @@ namespace Catore.Backend.Modules.ProfileAccount.Public;
 
 public interface IProfileAccountCommands
 {
-    Task SetUpgraded(Guid userId);
-    Task MarkWiped(Guid userId, DateTime wipedAt);
-    Task<UpdateProfileResultDto> UpdateProfile(Guid userId, UpdateProfileRequestDto request);
-    Task<ActivityAssessmentResultDto> SubmitActivityAssessment(Guid userId, string workEnvironment, string exerciseFrequency);
-    Task<TimezoneRefreshResultDto> RefreshTimezone(Guid userId, string newTimezone);
+    Task SetUpgraded(long userId);
+    Task MarkWiped(long userId, DateTime wipedAt);
+    Task<UpdateProfileResultDto> UpdateProfile(long userId, UpdateProfileRequestDto request);
+    Task<ActivityAssessmentResultDto> SubmitActivityAssessment(long userId, string workEnvironment, string exerciseFrequency);
+    Task<TimezoneRefreshResultDto> RefreshTimezone(long userId, string newTimezone);
 }

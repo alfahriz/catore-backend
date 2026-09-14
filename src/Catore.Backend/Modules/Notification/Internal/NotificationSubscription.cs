@@ -1,9 +1,9 @@
 namespace Catore.Backend.Modules.Notification.Internal;
 
-internal class NotificationSubscription
+internal class TNotification
 {
-    public Guid NotificationSubscriptionPk { get; set; }
-    public Guid UserId { get; set; }
+    public long NotificationPk { get; set; }
+    public long UserId { get; set; }
     public string? FcmToken { get; set; }
     public DateTime ModifiedOn { get; set; }
 }

@@ -12,23 +12,23 @@ internal class FreezeRepository
         _db = db;
     }
 
-    public async Task<FreezeState?> GetByUserId(Guid userId)
+    public async Task<TFreeze?> GetByUserId(long userId)
     {
-        return await _db.Set<FreezeState>().FirstOrDefaultAsync(f => f.UserId == userId);
+        return await _db.Set<TFreeze>().FirstOrDefaultAsync(f => f.UserId == userId);
     }
 
-    public async Task<FreezeState> Add(FreezeState state)
+    public async Task<TFreeze> Add(TFreeze state)
     {
         state.ModifiedOn = DateTime.UtcNow;
-        _db.Set<FreezeState>().Add(state);
+        _db.Set<TFreeze>().Add(state);
         await _db.SaveChangesAsync();
         return state;
     }
 
-    public async Task Update(FreezeState state)
+    public async Task Update(TFreeze state)
     {
         state.ModifiedOn = DateTime.UtcNow;
-        _db.Set<FreezeState>().Update(state);
+        _db.Set<TFreeze>().Update(state);
         await _db.SaveChangesAsync();
     }
 }

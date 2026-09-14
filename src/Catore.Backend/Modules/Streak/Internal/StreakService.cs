@@ -49,13 +49,13 @@ internal class StreakService : IStreakQueries, IStreakCommands
         _logger = logger;
     }
 
-    public async Task<bool> HasActiveGraceWindow(Guid userId)
+    public async Task<bool> HasActiveGraceWindow(long userId)
     {
         var missingDates = await GetMissingDates(userId);
         return missingDates.Count > 0;
     }
 
-    private async Task<IReadOnlyList<MissingDateInfo>> GetMissingDates(Guid userId)
+    private async Task<IReadOnlyList<MissingDateInfo>> GetMissingDates(long userId)
     {
         var account = await _authQueries.GetAccountInfo(userId);
         var profile = await _profileQueries.GetProfileSummary(userId);
@@ -70,36 +70,35 @@ internal class StreakService : IStreakQueries, IStreakCommands
         return GraceWindowHelper.GetMissingDates(signupDate, today, loggedDates, timezone);
     }
 
-    public async Task<StreakSummaryDto> GetStreakSummary(Guid userId)
+    public async Task<StreakSummaryDto> GetStreakSummary(long userId)
     {
         var state = await GetOrCreate(userId);
         var tokens = await _freezeQueries.GetAvailableTokens(userId);
 
         return new StreakSummaryDto(
-            state.CurrentStreakCount,
+            state.CurrentStreak,
             state.LastLoggedDate,
-            state.StreakIsFrozen,
+            state.IsStreakFrozen,
             tokens?.StreakFreezeCount ?? 0,
             tokens?.WipeFreezeCount ?? 0);
     }
 
-    public async Task<StreakState> GetOrCreate(Guid userId)
+    public async Task<TStreak> GetOrCreate(long userId)
     {
         var state = await _repository.GetByUserId(userId);
         if (state is not null) return state;
 
-        var newState = new StreakState
+        var newState = new TStreak
         {
-            StreakStatePk = Guid.NewGuid(),
             UserId = userId,
-            CurrentStreakCount = 0,
+            CurrentStreak = 0,
             LastLoggedDate = null,
-            StreakIsFrozen = false
+            IsStreakFrozen = false
         };
         return await _repository.Add(newState);
     }
 
-    public async Task RecordDailyLog(Guid userId, DateOnly date)
+    public async Task RecordDailyLog(long userId, DateOnly date)
     {
         var state = await GetOrCreate(userId);
 
@@ -109,7 +108,7 @@ internal class StreakService : IStreakQueries, IStreakCommands
             return;
         }
 
-        if (state.StreakIsFrozen)
+        if (state.IsStreakFrozen)
         {
             // Akun Upgraded tanpa goal aktif (Section 5.7) — streak counter tidak bergerak sama sekali.
             return;
@@ -120,12 +119,12 @@ internal class StreakService : IStreakQueries, IStreakCommands
 
         if (oldLastLoggedDate is null || date == oldLastLoggedDate.Value.AddDays(1))
         {
-            state.CurrentStreakCount += 1;
+            state.CurrentStreak += 1;
         }
         else if (date > oldLastLoggedDate.Value.AddDays(1))
         {
             // Ada gap tanpa cover Streak Freeze (freeze coverage dievaluasi job wipe-check, bukan di sini) — reset.
-            state.CurrentStreakCount = 1;
+            state.CurrentStreak = 1;
         }
         // isBackfillOfPastDate: backfill tanggal lampau setelah tanggal lebih baru sudah logged — counter tidak diutak-atik.
 
@@ -143,10 +142,10 @@ internal class StreakService : IStreakQueries, IStreakCommands
         }
     }
 
-    public async Task FreezeStreak(Guid userId)
+    public async Task FreezeStreak(long userId)
     {
         var state = await GetOrCreate(userId);
-        state.StreakIsFrozen = true;
+        state.IsStreakFrozen = true;
         await _repository.Update(state);
     }
 
@@ -154,7 +153,7 @@ internal class StreakService : IStreakQueries, IStreakCommands
     // Urutan eksekusi sesuai Section 5.1 & 5.6: evaluasi tanggal tertua yang expired ->
     // cek Streak Freeze dulu (cover -> Frozen, streak aman) -> gagal -> streak reset + lanjut cek Wipe Freeze
     // sebelum eksekusi wipe total.
-    public async Task EvaluateWipeCheck(Guid userId, DateTime utcNow)
+    public async Task EvaluateWipeCheck(long userId, DateTime utcNow)
     {
         var missingDates = await GetMissingDates(userId);
         var oldestExpired = missingDates
@@ -180,7 +179,7 @@ internal class StreakService : IStreakQueries, IStreakCommands
             else
             {
                 // Streak Freeze tidak tersedia/cukup -> streak reset, lanjut evaluasi wipe.
-                state.CurrentStreakCount = 0;
+                state.CurrentStreak = 0;
                 await _repository.Update(state);
 
                 var wipeFreezeCovered = await _freezeCommands.ConsumeWipeFreeze(userId, today);
@@ -195,9 +194,9 @@ internal class StreakService : IStreakQueries, IStreakCommands
                     await _weightTrackingCommands.WipeUserData(userId, utcNow);
                     await _profileCommands.MarkWiped(userId, utcNow);
 
-                    state.CurrentStreakCount = 0;
+                    state.CurrentStreak = 0;
                     state.LastLoggedDate = null;
-                    state.StreakIsFrozen = false;
+                    state.IsStreakFrozen = false;
                     await _repository.Update(state);
 
                     await _freezeCommands.ResetAfterWipe(userId);

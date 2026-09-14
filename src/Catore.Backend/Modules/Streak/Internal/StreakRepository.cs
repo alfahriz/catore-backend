@@ -20,28 +20,28 @@ internal class StreakRepository
         return await _db.Database.BeginTransactionAsync();
     }
 
-    public async Task<StreakState?> GetByUserId(Guid userId)
+    public async Task<TStreak?> GetByUserId(long userId)
     {
-        return await _db.Set<StreakState>().FirstOrDefaultAsync(s => s.UserId == userId);
+        return await _db.Set<TStreak>().FirstOrDefaultAsync(s => s.UserId == userId);
     }
 
-    public async Task<List<StreakState>> GetAll()
+    public async Task<List<TStreak>> GetAll()
     {
-        return await _db.Set<StreakState>().ToListAsync();
+        return await _db.Set<TStreak>().ToListAsync();
     }
 
-    public async Task<StreakState> Add(StreakState state)
+    public async Task<TStreak> Add(TStreak state)
     {
         state.ModifiedOn = DateTime.UtcNow;
-        _db.Set<StreakState>().Add(state);
+        _db.Set<TStreak>().Add(state);
         await _db.SaveChangesAsync();
         return state;
     }
 
-    public async Task Update(StreakState state)
+    public async Task Update(TStreak state)
     {
         state.ModifiedOn = DateTime.UtcNow;
-        _db.Set<StreakState>().Update(state);
+        _db.Set<TStreak>().Update(state);
         await _db.SaveChangesAsync();
     }
 }

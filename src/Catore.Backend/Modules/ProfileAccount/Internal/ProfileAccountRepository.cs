@@ -12,29 +12,29 @@ internal class ProfileAccountRepository
         _db = db;
     }
 
-    public async Task<ProfileAccount?> GetByUserId(Guid userId)
+    public async Task<MProfile?> GetByUserId(long userId)
     {
-        return await _db.Set<ProfileAccount>().FirstOrDefaultAsync(p => p.UserId == userId);
+        return await _db.Set<MProfile>().FirstOrDefaultAsync(p => p.UserId == userId);
     }
 
-    public async Task<List<Guid>> GetAllActiveUserIds()
+    public async Task<List<long>> GetAllActiveUserIds()
     {
-        return await _db.Set<ProfileAccount>()
-            .Where(p => !p.IsDeleted && !p.IsUpgraded)
+        return await _db.Set<MProfile>()
+            .Where(p => p.IsActive && !p.IsUpgraded)
             .Select(p => p.UserId)
             .ToListAsync();
     }
 
-    public async Task Add(ProfileAccount profile)
+    public async Task Add(MProfile profile)
     {
-        _db.Set<ProfileAccount>().Add(profile);
+        _db.Set<MProfile>().Add(profile);
         await _db.SaveChangesAsync();
     }
 
-    public async Task Update(ProfileAccount profile)
+    public async Task Update(MProfile profile)
     {
         profile.ModifiedOn = DateTime.UtcNow;
-        _db.Set<ProfileAccount>().Update(profile);
+        _db.Set<MProfile>().Update(profile);
         await _db.SaveChangesAsync();
     }
 }

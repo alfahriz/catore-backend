@@ -12,12 +12,12 @@ internal class NotificationRepository
         _db = db;
     }
 
-    public async Task<NotificationSubscription?> GetByUserId(Guid userId)
+    public async Task<TNotification?> GetByUserId(long userId)
     {
-        return await _db.Set<NotificationSubscription>().FirstOrDefaultAsync(n => n.UserId == userId);
+        return await _db.Set<TNotification>().FirstOrDefaultAsync(n => n.UserId == userId);
     }
 
-    public async Task UpsertFcmToken(Guid userId, string fcmToken)
+    public async Task UpsertFcmToken(long userId, string fcmToken)
     {
         var existing = await GetByUserId(userId);
         if (existing is not null)
@@ -27,9 +27,8 @@ internal class NotificationRepository
         }
         else
         {
-            _db.Set<NotificationSubscription>().Add(new NotificationSubscription
+            _db.Set<TNotification>().Add(new TNotification
             {
-                NotificationSubscriptionPk = Guid.NewGuid(),
                 UserId = userId,
                 FcmToken = fcmToken,
                 ModifiedOn = DateTime.UtcNow

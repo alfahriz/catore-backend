@@ -2,8 +2,8 @@ namespace Catore.Backend.Modules.Freeze.Public;
 
 public interface IFreezeCommands
 {
-    Task<bool> ConsumeStreakFreeze(Guid userId, DateOnly today);
-    Task<bool> ConsumeWipeFreeze(Guid userId, DateOnly today);
-    Task IncrementDaysSinceLastFreeze(Guid userId, DateOnly today);
-    Task ResetAfterWipe(Guid userId);
+    Task<bool> ConsumeStreakFreeze(long userId, DateOnly today);
+    Task<bool> ConsumeWipeFreeze(long userId, DateOnly today);
+    Task IncrementDaysSinceLastFreeze(long userId, DateOnly today);
+    Task ResetAfterWipe(long userId);
 }

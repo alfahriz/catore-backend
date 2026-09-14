@@ -19,7 +19,7 @@ public class ConsumptionController : ControllerBase
         _commands = commands;
     }
 
-    private Guid CurrentUserId => Guid.Parse(User.FindFirstValue("userid")!);
+    private long CurrentUserId => long.Parse(User.FindFirstValue("userid")!);
 
     [HttpPost("entries")]
     public async Task<IActionResult> AddEntries([FromBody] AddEntriesRequestDto request)
@@ -53,7 +53,7 @@ public class ConsumptionController : ControllerBase
     [HttpGet("autocomplete")]
     public async Task<IActionResult> Autocomplete([FromQuery] string query, [FromQuery] int page = 0, [FromQuery] int pageSize = 20)
     {
-        var results = await _queries.SearchAutocomplete(CurrentUserId, query, page, pageSize);
+        var results = await _queries.SearchAutocomplete(query, page, pageSize);
         return Ok(results);
     }
 

@@ -15,7 +15,7 @@ internal class TokenService
         _config = config;
     }
 
-    public string GenerateAccessToken(Guid userAccountPk, Guid activeSessionId)
+    public string GenerateAccessToken(long userPk, Guid sessionId)
     {
         var secret = _config["Jwt:Secret"]!;
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
@@ -23,8 +23,8 @@ internal class TokenService
 
         var claims = new[]
         {
-            new Claim("userid", userAccountPk.ToString()),
-            new Claim("sessionid", activeSessionId.ToString())
+            new Claim("userid", userPk.ToString()),
+            new Claim("sessionid", sessionId.ToString())
         };
 
         var expiryMinutes = int.Parse(_config["Jwt:AccessTokenExpiryMinutes"]!);

@@ -7,7 +7,7 @@ public record AuthAccountDto(
 public record SignUpResultDto(
     bool Success,
     string? ErrorMessage,
-    Guid? UserAccountPk
+    long? UserPk
 );
 
 public record LoginResultDto(

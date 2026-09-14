@@ -18,38 +18,38 @@ internal class WeightTrackingRepository
         return await _db.Database.BeginTransactionAsync();
     }
 
-    public async Task<List<WeightLog>> GetByUserIdAndRange(Guid userId, DateOnly startDate, DateOnly endDate)
+    public async Task<List<TWeightLog>> GetByUserIdAndRange(long userId, DateOnly startDate, DateOnly endDate)
     {
-        return await _db.Set<WeightLog>()
+        return await _db.Set<TWeightLog>()
             .Where(w => w.UserId == userId && !w.IsDeleted
-                && DateOnly.FromDateTime(w.LoggedAt) >= startDate && DateOnly.FromDateTime(w.LoggedAt) <= endDate)
+                && w.CheckpointDate >= startDate && w.CheckpointDate <= endDate)
             .ToListAsync();
     }
 
-    public async Task<WeightLog?> GetByUserIdAndDate(Guid userId, DateOnly date)
+    public async Task<TWeightLog?> GetByUserIdAndDate(long userId, DateOnly date)
     {
-        return await _db.Set<WeightLog>()
-            .FirstOrDefaultAsync(w => w.UserId == userId && !w.IsDeleted && DateOnly.FromDateTime(w.LoggedAt) == date);
+        return await _db.Set<TWeightLog>()
+            .FirstOrDefaultAsync(w => w.UserId == userId && !w.IsDeleted && w.CheckpointDate == date);
     }
 
-    public async Task<WeightLog> Add(WeightLog entry)
+    public async Task<TWeightLog> Add(TWeightLog entry)
     {
         entry.CreatedOn = DateTime.UtcNow;
-        _db.Set<WeightLog>().Add(entry);
+        _db.Set<TWeightLog>().Add(entry);
         await _db.SaveChangesAsync();
         return entry;
     }
 
-    public async Task Update(WeightLog entry)
+    public async Task Update(TWeightLog entry)
     {
         entry.ModifiedOn = DateTime.UtcNow;
-        _db.Set<WeightLog>().Update(entry);
+        _db.Set<TWeightLog>().Update(entry);
         await _db.SaveChangesAsync();
     }
 
-    public async Task WipeUserData(Guid userId, DateTime wipedAt)
+    public async Task WipeUserData(long userId, DateTime wipedAt)
     {
-        var entries = await _db.Set<WeightLog>()
+        var entries = await _db.Set<TWeightLog>()
             .Where(w => w.UserId == userId && !w.IsDeleted)
             .ToListAsync();
 

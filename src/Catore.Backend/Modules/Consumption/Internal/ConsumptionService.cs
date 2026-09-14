@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Catore.Backend.Modules.Consumption.Public;
+using Catore.Backend.Modules.Param.Public;
 using Catore.Backend.Modules.ProfileAccount.Public;
 using Catore.Backend.Modules.Streak.Public;
 
@@ -7,16 +8,27 @@ namespace Catore.Backend.Modules.Consumption.Internal;
 
 internal class ConsumptionService : IConsumptionQueries, IConsumptionCommands
 {
-    private const string DefaultDeficitCategory = "mid";
+    private const string DefaultDeficitCategory = "Mid";
+    private const string DeficitCategoryParamType = "DEFICIT_CATEGORY";
+    private const string MealTypeParamType = "MEAL_TYPE";
+    private const string RecordFromParamType = "RECORD_FROM";
+    private const string RecordFromLazyCreate = "Lazy Create";
+    private const string RecordFromFreeze = "Freeze";
 
     private readonly ConsumptionRepository _repository;
     private readonly IProfileAccountQueries _profileQueries;
+    private readonly IParamQueries _paramQueries;
     private readonly IServiceProvider _serviceProvider;
 
-    public ConsumptionService(ConsumptionRepository repository, IProfileAccountQueries profileQueries, IServiceProvider serviceProvider)
+    public ConsumptionService(
+        ConsumptionRepository repository,
+        IProfileAccountQueries profileQueries,
+        IParamQueries paramQueries,
+        IServiceProvider serviceProvider)
     {
         _repository = repository;
         _profileQueries = profileQueries;
+        _paramQueries = paramQueries;
         _serviceProvider = serviceProvider;
     }
 
@@ -24,22 +36,22 @@ internal class ConsumptionService : IConsumptionQueries, IConsumptionCommands
     // (baca gap kalender, wipe data), circular kalau di-inject langsung di constructor.
     private IStreakCommands StreakCommands => _serviceProvider.GetRequiredService<IStreakCommands>();
 
-    public async Task<IReadOnlyList<DailyTotalDto>> GetDailyTotalsForRange(Guid userId, DateOnly startDate, DateOnly endDate)
+    public async Task<IReadOnlyList<DailyTotalDto>> GetDailyTotalsForRange(long userId, DateOnly startDate, DateOnly endDate)
     {
         return await _repository.GetDailyTotalsForRange(userId, startDate, endDate);
     }
 
-    public async Task<HashSet<DateOnly>> GetLoggedDates(Guid userId, DateOnly startDate, DateOnly endDate)
+    public async Task<HashSet<DateOnly>> GetLoggedDates(long userId, DateOnly startDate, DateOnly endDate)
     {
         return await _repository.GetLoggedDates(userId, startDate, endDate);
     }
 
-    public async Task WipeUserData(Guid userId, DateTime wipedAt)
+    public async Task WipeUserData(long userId, DateTime wipedAt)
     {
         await _repository.WipeUserData(userId, wipedAt);
     }
 
-    public async Task MarkDayFrozen(Guid userId, DateOnly date)
+    public async Task MarkDayFrozen(long userId, DateOnly date)
     {
         var dailyRecord = await _repository.GetDailyRecord(userId, date);
         if (dailyRecord is null)
@@ -47,16 +59,18 @@ internal class ConsumptionService : IConsumptionQueries, IConsumptionCommands
             var effectiveLimit = await _profileQueries.CalculateLimit(userId, DefaultDeficitCategory, paToday: false);
             if (effectiveLimit is null) return;
 
-            dailyRecord = await _repository.AddDailyRecord(new DailyRecord
+            var deficitCategoryPk = await _paramQueries.ResolvePk(DeficitCategoryParamType, DefaultDeficitCategory);
+            var recordFromPk = await _paramQueries.ResolvePk(RecordFromParamType, RecordFromFreeze);
+
+            dailyRecord = await _repository.AddDailyRecord(new TDailyRecord
             {
-                DailyRecordPk = Guid.NewGuid(),
                 UserId = userId,
                 RecordDate = date,
-                DeficitCategory = DefaultDeficitCategory,
+                DeficitCategory = deficitCategoryPk,
                 PaToday = false,
                 EffectiveTdee = effectiveLimit.Tdee,
                 EffectiveLimit = effectiveLimit.Limit,
-                CreatedVia = "freeze",
+                CreatedVia = recordFromPk,
                 IsFrozen = true
             });
             return;
@@ -66,63 +80,77 @@ internal class ConsumptionService : IConsumptionQueries, IConsumptionCommands
         await _repository.UpdateDailyRecord(dailyRecord);
     }
 
-    public async Task<DailyRecordDto> GetOrCreateDailyRecord(Guid userId, DateOnly date)
+    public async Task<DailyRecordDto> GetOrCreateDailyRecord(long userId, DateOnly date)
     {
         var dailyRecord = await _repository.GetDailyRecord(userId, date);
         if (dailyRecord is null)
         {
             var effectiveLimit = await _profileQueries.CalculateLimit(userId, DefaultDeficitCategory, paToday: false);
-            dailyRecord = await _repository.AddDailyRecord(new DailyRecord
+            var deficitCategoryPk = await _paramQueries.ResolvePk(DeficitCategoryParamType, DefaultDeficitCategory);
+            var recordFromPk = await _paramQueries.ResolvePk(RecordFromParamType, RecordFromLazyCreate);
+
+            dailyRecord = await _repository.AddDailyRecord(new TDailyRecord
             {
-                DailyRecordPk = Guid.NewGuid(),
                 UserId = userId,
                 RecordDate = date,
-                DeficitCategory = DefaultDeficitCategory,
+                DeficitCategory = deficitCategoryPk,
                 PaToday = false,
                 EffectiveTdee = effectiveLimit?.Tdee ?? 0,
                 EffectiveLimit = effectiveLimit?.Limit ?? 0,
-                CreatedVia = "lazy-create",
+                CreatedVia = recordFromPk,
                 IsFrozen = false
             });
         }
 
-        var intakeSum = await _repository.GetIntakeSum(userId, date);
-        return new DailyRecordDto(dailyRecord.RecordDate, dailyRecord.DeficitCategory, dailyRecord.PaToday, dailyRecord.EffectiveTdee, dailyRecord.EffectiveLimit, dailyRecord.IsFrozen, intakeSum);
+        return await BuildDailyRecordDto(dailyRecord, userId, date);
     }
 
-    public async Task<DailyRecordDto?> UpdateDailyRecord(Guid userId, DateOnly date, UpdateDailyRecordRequestDto request)
+    public async Task<DailyRecordDto?> UpdateDailyRecord(long userId, DateOnly date, UpdateDailyRecordRequestDto request)
     {
         var dailyRecord = await _repository.GetDailyRecord(userId, date);
         if (dailyRecord is null) return null;
 
-        var deficitCategory = request.DeficitCategory ?? dailyRecord.DeficitCategory;
+        var deficitCategoryName = request.DeficitCategory ?? await _paramQueries.ResolveName(dailyRecord.DeficitCategory) ?? DefaultDeficitCategory;
         var paToday = request.PaToday ?? dailyRecord.PaToday;
 
-        var effectiveLimit = await _profileQueries.CalculateLimit(userId, deficitCategory, paToday);
+        var effectiveLimit = await _profileQueries.CalculateLimit(userId, deficitCategoryName, paToday);
         if (effectiveLimit is null) return null;
 
-        dailyRecord.DeficitCategory = deficitCategory;
+        dailyRecord.DeficitCategory = await _paramQueries.ResolvePk(DeficitCategoryParamType, deficitCategoryName);
         dailyRecord.PaToday = paToday;
         dailyRecord.EffectiveTdee = effectiveLimit.Tdee;
         dailyRecord.EffectiveLimit = effectiveLimit.Limit;
         await _repository.UpdateDailyRecord(dailyRecord);
 
-        var intakeSum = await _repository.GetIntakeSum(userId, date);
-        return new DailyRecordDto(dailyRecord.RecordDate, dailyRecord.DeficitCategory, dailyRecord.PaToday, dailyRecord.EffectiveTdee, dailyRecord.EffectiveLimit, dailyRecord.IsFrozen, intakeSum);
+        return await BuildDailyRecordDto(dailyRecord, userId, date);
     }
 
-    public async Task<IReadOnlyList<AutocompleteItemDto>> SearchAutocomplete(Guid userId, string query, int page, int pageSize)
+    private async Task<DailyRecordDto> BuildDailyRecordDto(TDailyRecord dailyRecord, long userId, DateOnly date)
     {
-        return await _repository.SearchAutocomplete(userId, query, page, pageSize);
+        var intakeSum = await _repository.GetIntakeSum(userId, date);
+        var deficitCategoryName = await _paramQueries.ResolveName(dailyRecord.DeficitCategory) ?? DefaultDeficitCategory;
+        return new DailyRecordDto(dailyRecord.RecordDate, deficitCategoryName, dailyRecord.PaToday, dailyRecord.EffectiveTdee, dailyRecord.EffectiveLimit, dailyRecord.IsFrozen, intakeSum);
     }
 
-    public async Task<IReadOnlyList<ConsumptionEntrySavedDto>> GetEntriesForDate(Guid userId, DateOnly date)
+    // GLOBAL, bukan personal lagi — bank mconsumption dipakai bareng semua user.
+    public async Task<IReadOnlyList<AutocompleteItemDto>> SearchAutocomplete(string query, int page, int pageSize)
+    {
+        return await _repository.SearchAutocomplete(query, page, pageSize);
+    }
+
+    public async Task<IReadOnlyList<ConsumptionEntrySavedDto>> GetEntriesForDate(long userId, DateOnly date)
     {
         var entries = await _repository.GetEntriesForDate(userId, date);
-        return entries.Select(e => new ConsumptionEntrySavedDto(e.ConsumptionEntryPk, e.FoodName, e.Calories, e.MealType, e.EntryTimestamp)).ToList();
+        var result = new List<ConsumptionEntrySavedDto>();
+        foreach (var (entry, consumption) in entries)
+        {
+            var mealTypeName = await _paramQueries.ResolveName(entry.MealType) ?? string.Empty;
+            result.Add(new ConsumptionEntrySavedDto(entry.EntryPk, consumption.Name, consumption.Calories, mealTypeName, entry.EntryTimestamp));
+        }
+        return result;
     }
 
-    public async Task<IReadOnlyList<QuickAddItemDto>> GetQuickAdd(Guid userId)
+    public async Task<IReadOnlyList<QuickAddItemDto>> GetQuickAdd(long userId)
     {
         var profile = await _profileQueries.GetProfileSummary(userId);
         if (profile is null) return Array.Empty<QuickAddItemDto>();
@@ -134,14 +162,15 @@ internal class ConsumptionService : IConsumptionQueries, IConsumptionCommands
         return await _repository.GetQuickAdd(userId, yesterday);
     }
 
-    public async Task<AddEntriesResultDto> AddEntries(Guid userId, AddEntriesRequestDto request)
+    public async Task<AddEntriesResultDto> AddEntries(long userId, AddEntriesRequestDto request)
     {
         if (request.Items.Count == 0)
         {
             return new AddEntriesResultDto(false, "At least one item is required", Array.Empty<ConsumptionEntrySavedDto>(), null);
         }
 
-        var dailyRecord = await _repository.GetDailyRecord(userId, request.EntryDate);
+        var entryDate = DateOnly.FromDateTime(request.EntryTimestamp);
+        var dailyRecord = await _repository.GetDailyRecord(userId, entryDate);
         if (dailyRecord is null)
         {
             var effectiveLimit = await _profileQueries.CalculateLimit(userId, DefaultDeficitCategory, paToday: false);
@@ -150,42 +179,63 @@ internal class ConsumptionService : IConsumptionQueries, IConsumptionCommands
                 return new AddEntriesResultDto(false, "Profile not found", Array.Empty<ConsumptionEntrySavedDto>(), null);
             }
 
-            dailyRecord = await _repository.AddDailyRecord(new DailyRecord
+            var deficitCategoryPk = await _paramQueries.ResolvePk(DeficitCategoryParamType, DefaultDeficitCategory);
+            var recordFromPk = await _paramQueries.ResolvePk(RecordFromParamType, RecordFromLazyCreate);
+
+            dailyRecord = await _repository.AddDailyRecord(new TDailyRecord
             {
-                DailyRecordPk = Guid.NewGuid(),
                 UserId = userId,
-                RecordDate = request.EntryDate,
-                DeficitCategory = DefaultDeficitCategory,
+                RecordDate = entryDate,
+                DeficitCategory = deficitCategoryPk,
                 PaToday = false,
                 EffectiveTdee = effectiveLimit.Tdee,
                 EffectiveLimit = effectiveLimit.Limit,
-                CreatedVia = "lazy-create",
+                CreatedVia = recordFromPk,
                 IsFrozen = false
             });
         }
 
-        var entries = request.Items.Select(item => new ConsumptionEntry
+        var mealTypePk = await _paramQueries.ResolvePk(MealTypeParamType, request.MealType);
+
+        var entries = new List<TConsumption>();
+        foreach (var item in request.Items)
         {
-            ConsumptionEntryPk = Guid.NewGuid(),
-            UserId = userId,
-            EntryDate = request.EntryDate,
-            MealType = request.MealType,
-            FoodName = item.FoodName,
-            Calories = item.Calories,
-            EntryTimestamp = request.EntryTimestamp
-        }).ToList();
+            var consumptionId = await _repository.GetOrCreateConsumption(item.FoodName, item.Calories, userId);
+            entries.Add(new TConsumption
+            {
+                UserId = userId,
+                ConsumptionId = consumptionId,
+                MealType = mealTypePk,
+                EntryTimestamp = request.EntryTimestamp
+            });
+        }
 
         var saved = await _repository.AddEntries(entries);
 
-        await StreakCommands.RecordDailyLog(userId, request.EntryDate);
+        await StreakCommands.RecordDailyLog(userId, entryDate);
 
-        var intakeSum = await _repository.GetIntakeSum(userId, request.EntryDate);
+        // actualCalories WAJIB disinkronkan ulang tiap kali ada entry baru (lihat catatan
+        // schema-curation soal cache ini) — dihitung ulang dari SUM tconsumption, bukan
+        // increment manual, biar selalu akurat walau ada entry lama yg ke-soft-delete.
+        var intakeSum = await _repository.GetIntakeSum(userId, entryDate);
+        dailyRecord.ActualCalories = intakeSum;
+        await _repository.UpdateDailyRecord(dailyRecord);
+
+        var savedDtos = new List<ConsumptionEntrySavedDto>();
+        foreach (var entry in saved)
+        {
+            var item = request.Items[saved.IndexOf(entry)];
+            var mealTypeName = await _paramQueries.ResolveName(entry.MealType) ?? request.MealType;
+            savedDtos.Add(new ConsumptionEntrySavedDto(entry.EntryPk, item.FoodName, item.Calories, mealTypeName, entry.EntryTimestamp));
+        }
+
+        var deficitCategoryName = await _paramQueries.ResolveName(dailyRecord.DeficitCategory) ?? DefaultDeficitCategory;
 
         return new AddEntriesResultDto(
             true,
             null,
-            saved.Select(e => new ConsumptionEntrySavedDto(e.ConsumptionEntryPk, e.FoodName, e.Calories, e.MealType, e.EntryTimestamp)).ToList(),
-            new DailyRecordDto(dailyRecord.RecordDate, dailyRecord.DeficitCategory, dailyRecord.PaToday, dailyRecord.EffectiveTdee, dailyRecord.EffectiveLimit, dailyRecord.IsFrozen, intakeSum)
+            savedDtos,
+            new DailyRecordDto(dailyRecord.RecordDate, deficitCategoryName, dailyRecord.PaToday, dailyRecord.EffectiveTdee, dailyRecord.EffectiveLimit, dailyRecord.IsFrozen, intakeSum)
         );
     }
 }

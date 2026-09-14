@@ -2,13 +2,13 @@ namespace Catore.Backend.Modules.Notification.Public;
 
 public interface INotificationSender
 {
-    Task SendDailyReminder(Guid userId, bool includeSafetyFloorWarning);
-    Task SendGraceWindowCountdown(Guid userId, IReadOnlyList<DateOnly> outstandingDates, DateOnly oldestDeadline);
-    Task SendWipeNotif(Guid userId);
-    Task SendForceLogoutNotif(Guid userId);
-    Task SendFreezeUsedNotif(Guid userId, string freezeType, int remaining);
-    Task SendFreezeGainedNotif(Guid userId, string freezeType);
-    Task SendPasswordResetRequestedNotif(Guid userId);
-    Task SendWeighInReminder(Guid userId);
-    Task SendGoalAchievedNotif(Guid userId, int frozenStreakCount);
+    Task SendDailyReminder(long userId, bool includeSafetyFloorWarning);
+    Task SendGraceWindowCountdown(long userId, IReadOnlyList<DateOnly> outstandingDates, DateOnly oldestDeadline);
+    Task SendWipeNotif(long userId);
+    Task SendForceLogoutNotif(long userId);
+    Task SendFreezeUsedNotif(long userId, string freezeType, int remaining);
+    Task SendFreezeGainedNotif(long userId, string freezeType);
+    Task SendPasswordResetRequestedNotif(long userId);
+    Task SendWeighInReminder(long userId);
+    Task SendGoalAchievedNotif(long userId, int frozenStreakCount);
 }
