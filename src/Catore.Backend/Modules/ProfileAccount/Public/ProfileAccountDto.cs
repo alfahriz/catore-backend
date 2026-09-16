@@ -21,7 +21,8 @@ public record ProfileFullDto(
     decimal Tdee,
     decimal Bmi,
     string BmiCategory,
-    IReadOnlyDictionary<string, decimal> CategoryLimits
+    IReadOnlyDictionary<string, decimal> CategoryLimits,
+    DateTime? LastWipeOn
 );
 
 public record UpdateProfileRequestDto(

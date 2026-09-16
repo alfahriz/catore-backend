@@ -61,6 +61,14 @@ internal class StreakService : IStreakQueries, IStreakCommands
         var profile = await _profileQueries.GetProfileSummary(userId);
         if (account is null || profile is null) return Array.Empty<MissingDateInfo>();
 
+        // Timezone bisa kosong buat user yg baru lewat Onboarding step 1 (FE gak kirim field ini
+        // di step itu, PRD 4.0: cuma height/weight/age/gender) — tanpa guard ini, FindSystemTimeZoneById
+        // lempar TimeZoneNotFoundException 500 tiap kali fungsi ini kepanggil (termasuk dari
+        // RefreshTimezone sendiri, bikin user gak bisa isi timezone kosongnya krn justru dicegat di
+        // sini duluan). Timezone kosong = anggap gak ada grace window aktif (aman, user blm py histori
+        // consumption apa pun yg perlu dicek di titik ini).
+        if (string.IsNullOrEmpty(profile.Timezone)) return Array.Empty<MissingDateInfo>();
+
         var timezone = TimeZoneInfo.FindSystemTimeZoneById(profile.Timezone);
         var nowInTimezone = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timezone);
         var today = DateOnly.FromDateTime(nowInTimezone);

@@ -18,6 +18,7 @@ INSERT INTO mparam ("paramType", name, value, "createdOn", "createdBy") VALUES
   ('MEAL_TYPE', 'Lunch', 2, now(), NULL),
   ('MEAL_TYPE', 'Dinner', 3, now(), NULL),
   ('MEAL_TYPE', 'Snack', 4, now(), NULL),
+  ('DEFICIT_CATEGORY', 'Recovery', 0, now(), NULL),
   ('DEFICIT_CATEGORY', 'Soft', 1, now(), NULL),
   ('DEFICIT_CATEGORY', 'Mid', 2, now(), NULL),
   ('DEFICIT_CATEGORY', 'Hard', 3, now(), NULL),

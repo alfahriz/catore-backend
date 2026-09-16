@@ -78,7 +78,8 @@ internal class ProfileAccountService : IProfileAccountQueries, IProfileAccountCo
             Math.Round(tdee, 0),
             Math.Round(bmi, 1),
             bmiCategory,
-            categoryLimits.ToDictionary(kv => kv.Key, kv => Math.Round(kv.Value, 0))
+            categoryLimits.ToDictionary(kv => kv.Key, kv => Math.Round(kv.Value, 0)),
+            profile.LastWipeOn
         );
     }
 

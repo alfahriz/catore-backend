@@ -61,6 +61,23 @@ builder.Services.AddSwaggerGen(options =>
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// FE dev server (Vite, port 5173) manggil API ini dari origin beda — TANPA CORS browser block
+// preflight OPTIONS request (ketemu 2026-09-16 pas mulai migrasi FE dari dummy data ke API asli,
+// sebelumnya gak pernah kesentuh krn semua page FE masih dummy). Policy khusus utk origin dev
+// server ini — kalau nanti ada domain prod/staging beneran, tambah origin itu jg, jangan langsung
+// AllowAnyOrigin (kurang aman utk endpoint yg pakai cookie/kredensial, meski app ini pakai Bearer
+// token bukan cookie — tetap best practice whitelist origin eksplisit).
+const string DevCorsPolicy = "DevCors";
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(DevCorsPolicy, policy =>
+    {
+        policy.WithOrigins("http://localhost:5173", "http://localhost:5174", "http://localhost:5175")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 var firebaseKeyPath = builder.Configuration["Firebase:ServiceAccountKeyPath"]!;
 FirebaseApp.Create(new AppOptions
 {
@@ -151,6 +168,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors(DevCorsPolicy);
 
 app.UseAuthentication();
 app.UseAuthorization();
