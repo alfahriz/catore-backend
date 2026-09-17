@@ -155,6 +155,12 @@ internal class ConsumptionService : IConsumptionQueries, IConsumptionCommands
         var profile = await _profileQueries.GetProfileSummary(userId);
         if (profile is null) return Array.Empty<QuickAddItemDto>();
 
+        // Sama pola guard StreakService.GetSignupToTodayRange (2026-09-16/17) — timezone kosong
+        // (user baru abis Onboarding step 1, blm pernah refresh timezone) bikin FindSystemTimeZoneById
+        // lempar TimeZoneNotFoundException 500. Timezone kosong = gak ada histori "kemarin" yg
+        // relevan buat quick-add, aman return kosong.
+        if (string.IsNullOrEmpty(profile.Timezone)) return Array.Empty<QuickAddItemDto>();
+
         var timezone = TimeZoneInfo.FindSystemTimeZoneById(profile.Timezone);
         var nowInTimezone = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timezone);
         var yesterday = DateOnly.FromDateTime(nowInTimezone).AddDays(-1);

@@ -25,4 +25,18 @@ public class StreakController : ControllerBase
         var summary = await _queries.GetStreakSummary(CurrentUserId);
         return Ok(summary);
     }
+
+    [HttpGet("missing-dates")]
+    public async Task<IActionResult> GetMissingDates()
+    {
+        var missingDates = await _queries.GetMissingDatesForDisplay(CurrentUserId);
+        return Ok(missingDates);
+    }
+
+    [HttpGet("frozen-days")]
+    public async Task<IActionResult> GetFrozenDays()
+    {
+        var frozenDays = await _queries.GetUnfilledFrozenDays(CurrentUserId);
+        return Ok(frozenDays);
+    }
 }

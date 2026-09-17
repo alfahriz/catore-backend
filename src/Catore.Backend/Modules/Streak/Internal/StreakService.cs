@@ -55,11 +55,46 @@ internal class StreakService : IStreakQueries, IStreakCommands
         return missingDates.Count > 0;
     }
 
+    // PRD 5.1: banner Homepage + halaman detail Backfill butuh DAFTAR tanggal outstanding (bukan
+    // cuma bool HasActiveGraceWindow) — tanggal TERTUA (deadline paling dekat) diberi label
+    // "Last day", sisanya "X day(s) left". Sengaja method publik TERPISAH dari HasActiveGraceWindow
+    // (bukan expose GetMissingDates mentah2 jadi publik) krn caller luar butuh bentuk yg udah siap-
+    // tampil (IsLastDay/DaysLeft), bukan urus sendiri logic pembandingan tanggal.
+    public async Task<IReadOnlyList<MissingDateDto>> GetMissingDatesForDisplay(long userId)
+    {
+        var missingDates = await GetMissingDates(userId);
+        if (missingDates.Count == 0) return Array.Empty<MissingDateDto>();
+
+        var oldestDate = GraceWindowHelper.GetOldestMissingDate(missingDates);
+        var utcNow = DateTime.UtcNow;
+
+        return missingDates
+            .OrderBy(m => m.Date)
+            .Select(m => new MissingDateDto(
+                m.Date,
+                m.Deadline,
+                m.Date == oldestDate,
+                Math.Max(0, (int)Math.Ceiling((m.Deadline - utcNow).TotalDays))))
+            .ToList();
+    }
+
     private async Task<IReadOnlyList<MissingDateInfo>> GetMissingDates(long userId)
+    {
+        var range = await GetSignupToTodayRange(userId);
+        if (range is null) return Array.Empty<MissingDateInfo>();
+        var (signupDate, today, timezone) = range.Value;
+
+        var loggedDates = await _consumptionQueries.GetLoggedDates(userId, signupDate, today);
+        return GraceWindowHelper.GetMissingDates(signupDate, today, loggedDates, timezone);
+    }
+
+    // Extract dari GetMissingDates (2026-09-17) — dipakai bareng GetUnfilledFrozenDays, dua-duanya
+    // butuh rentang [signupDate, today] dalam timezone akun yg sama persis.
+    private async Task<(DateOnly SignupDate, DateOnly Today, TimeZoneInfo Timezone)?> GetSignupToTodayRange(long userId)
     {
         var account = await _authQueries.GetAccountInfo(userId);
         var profile = await _profileQueries.GetProfileSummary(userId);
-        if (account is null || profile is null) return Array.Empty<MissingDateInfo>();
+        if (account is null || profile is null) return null;
 
         // Timezone bisa kosong buat user yg baru lewat Onboarding step 1 (FE gak kirim field ini
         // di step itu, PRD 4.0: cuma height/weight/age/gender) — tanpa guard ini, FindSystemTimeZoneById
@@ -67,15 +102,29 @@ internal class StreakService : IStreakQueries, IStreakCommands
         // RefreshTimezone sendiri, bikin user gak bisa isi timezone kosongnya krn justru dicegat di
         // sini duluan). Timezone kosong = anggap gak ada grace window aktif (aman, user blm py histori
         // consumption apa pun yg perlu dicek di titik ini).
-        if (string.IsNullOrEmpty(profile.Timezone)) return Array.Empty<MissingDateInfo>();
+        if (string.IsNullOrEmpty(profile.Timezone)) return null;
 
         var timezone = TimeZoneInfo.FindSystemTimeZoneById(profile.Timezone);
         var nowInTimezone = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, timezone);
         var today = DateOnly.FromDateTime(nowInTimezone);
         var signupDate = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(account.CreatedOn, timezone));
 
-        var loggedDates = await _consumptionQueries.GetLoggedDates(userId, signupDate, today);
-        return GraceWindowHelper.GetMissingDates(signupDate, today, loggedDates, timezone);
+        return (signupDate, today, timezone);
+    }
+
+    // PRD 5.6/5.1: hari Frozen (Streak Freeze terpakai) SELALU muncul sbg kartu OPSIONAL di halaman
+    // detail Backfill, terpisah dari kartu grace-active (Last day/X days left) — gak py deadline,
+    // murni ajakan isi kalau mau data gak timpang. "Belum diisi" = row tdailyrecord.isFrozen=true
+    // TAPI HasEntry=false (DailyTotalDto, dari GetDailyTotalsForRange yg udah ada) — kalau sudah
+    // dibackfill, gak muncul lagi di sini (treated normal, PRD: ikut agregasi normal begitu terisi).
+    public async Task<IReadOnlyList<DateOnly>> GetUnfilledFrozenDays(long userId)
+    {
+        var range = await GetSignupToTodayRange(userId);
+        if (range is null) return Array.Empty<DateOnly>();
+        var (signupDate, today, _) = range.Value;
+
+        var totals = await _consumptionQueries.GetDailyTotalsForRange(userId, signupDate, today);
+        return totals.Where(t => t.IsFrozen && !t.HasEntry).Select(t => t.Date).OrderBy(d => d).ToList();
     }
 
     public async Task<StreakSummaryDto> GetStreakSummary(long userId)
