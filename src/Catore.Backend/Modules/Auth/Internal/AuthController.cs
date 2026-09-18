@@ -21,9 +21,9 @@ public class AuthController : ControllerBase
     [HttpPost("signup")]
     public async Task<IActionResult> SignUp([FromBody] SignUpRequest request)
     {
-        if (request.Password.Length < 6)
+        if (request.Password.Length < 6 || request.Password.Length > 12)
         {
-            return BadRequest(new { error = "Password must be at least 6 characters" });
+            return BadRequest(new { error = "Password must be 6-12 characters" });
         }
         if (request.Password != request.ConfirmPassword)
         {
@@ -54,11 +54,42 @@ public class AuthController : ControllerBase
         return Ok(new { accessToken = result.AccessToken, refreshToken = result.RefreshToken });
     }
 
+    [AllowAnonymous]
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh([FromBody] RefreshRequest request)
+    {
+        var result = await _authCommands.RefreshAccessToken(request.RefreshToken);
+        if (!result.Success)
+        {
+            return Unauthorized(new { error = result.ErrorMessage });
+        }
+
+        return Ok(new { accessToken = result.AccessToken, refreshToken = result.RefreshToken });
+    }
+
     [HttpPost("logout")]
     public async Task<IActionResult> Logout()
     {
         var userId = long.Parse(User.FindFirstValue("userid")!);
         await _authCommands.Logout(userId);
+        return Ok();
+    }
+
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+    {
+        if (request.NewPassword.Length < 6 || request.NewPassword.Length > 12)
+        {
+            return BadRequest(new { error = "Password must be 6-12 characters" });
+        }
+
+        var userId = long.Parse(User.FindFirstValue("userid")!);
+        var result = await _authCommands.ChangePassword(userId, request.CurrentPassword, request.NewPassword);
+        if (!result.Success)
+        {
+            return BadRequest(new { error = result.ErrorMessage });
+        }
+
         return Ok();
     }
 
@@ -75,9 +106,9 @@ public class AuthController : ControllerBase
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
     {
-        if (request.NewPassword.Length < 6)
+        if (request.NewPassword.Length < 6 || request.NewPassword.Length > 12)
         {
-            return BadRequest(new { error = "Password must be at least 6 characters" });
+            return BadRequest(new { error = "Password must be 6-12 characters" });
         }
 
         var success = await _authCommands.ResetPassword(request.ResetToken, request.NewPassword);
@@ -115,6 +146,8 @@ public class AuthController : ControllerBase
 
 public record SignUpRequest(string Email, string Password, string ConfirmPassword);
 public record LoginRequest(string Email, string Password, string? FcmToken);
+public record RefreshRequest(string RefreshToken);
+public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 public record ForgotPasswordRequest(string Email);
 public record ResetPasswordRequest(string ResetToken, string NewPassword);
 public record VerifyEmailRequest(string VerifyToken);

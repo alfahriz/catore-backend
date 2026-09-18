@@ -17,6 +17,18 @@ public record LoginResultDto(
     string? RefreshToken
 );
 
+public record RefreshResultDto(
+    bool Success,
+    string? ErrorMessage,
+    string? AccessToken,
+    string? RefreshToken
+);
+
+public record ChangePasswordResultDto(
+    bool Success,
+    string? ErrorMessage
+);
+
 public record ResendVerificationResultDto(
     bool Success,
     int CooldownSecondsRemaining

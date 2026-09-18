@@ -134,6 +134,30 @@ internal class AuthService : IAuthQueries, IAuthCommands
         return new LoginResultDto(true, null, accessToken, account.JwtRefreshToken);
     }
 
+    // Rotasi refresh token (token lama LANGSUNG diganti token baru, bukan reusable) — praktik
+    // standar: kalau refresh token lama bocor & dipakai penyerang duluan, token itu udah gak
+    // valid lagi begitu pemilik asli refresh sekali. SessionId TETAP SAMA (bukan digenerate ulang
+    // kayak Login) — ini perpanjangan sesi yg sama, bukan sesi baru, jadi gak trigger force-logout
+    // notif ke device lain (Login yg trigger itu, refresh bukan).
+    public async Task<RefreshResultDto> RefreshAccessToken(string refreshToken)
+    {
+        var account = await _repository.GetByRefreshToken(refreshToken);
+        if (account is null || account.JwtRefreshTokenExpiredAt is null || account.JwtRefreshTokenExpiredAt < DateTime.UtcNow)
+        {
+            return new RefreshResultDto(false, "Invalid or expired refresh token", null, null);
+        }
+
+        var sessionId = account.SessionId ?? Guid.NewGuid();
+        account.SessionId = sessionId;
+        account.JwtRefreshToken = TokenService.GenerateSecureToken();
+        account.JwtRefreshTokenExpiredAt = _tokenService.GetRefreshTokenExpiry();
+        await _repository.Update(account);
+
+        var accessToken = _tokenService.GenerateAccessToken(account.UserPk, sessionId);
+
+        return new RefreshResultDto(true, null, accessToken, account.JwtRefreshToken);
+    }
+
     public async Task Logout(long userId)
     {
         var account = await _repository.GetById(userId);
@@ -142,6 +166,30 @@ internal class AuthService : IAuthQueries, IAuthCommands
         account.JwtRefreshToken = null;
         account.JwtRefreshTokenExpiredAt = null;
         await _repository.Update(account);
+    }
+
+    // PRD: wajib verifikasi current password dulu (re-auth) sebelum bisa ganti — mencegah orang
+    // lain ganti password kalau device ketinggalan saat sesi masih login. Sukses ganti password
+    // SELALU invalidate sesi (refresh token dimatikan, sama pola ResetPassword) — termasuk device
+    // yg lagi dipakai ganti password ini sendiri, konsisten "sesi lain" di PRD (app ini single-
+    // session, jadi "device sendiri" ITU LAH satu-satunya sesi yg ada). Access token yg lagi
+    // dipegang tetap jalan sampai natural expire (15 menit) baru ketauan pas refresh gagal —
+    // level proteksi yg sama kayak Login/ResetPassword di modul ini, bukan pengurangan.
+    public async Task<ChangePasswordResultDto> ChangePassword(long userId, string currentPassword, string newPassword)
+    {
+        var account = await _repository.GetById(userId);
+        if (account is null || !BCrypt.Net.BCrypt.Verify(currentPassword, account.Password))
+        {
+            return new ChangePasswordResultDto(false, "Current password is incorrect");
+        }
+
+        account.Password = BCrypt.Net.BCrypt.HashPassword(newPassword);
+        account.SessionId = null;
+        account.JwtRefreshToken = null;
+        account.JwtRefreshTokenExpiredAt = null;
+        await _repository.Update(account);
+
+        return new ChangePasswordResultDto(true, null);
     }
 
     public async Task<bool> RequestPasswordReset(string email)

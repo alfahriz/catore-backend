@@ -37,6 +37,11 @@ internal class AuthRepository
         return await _db.Set<MUser>().FirstOrDefaultAsync(u => u.EmailVerifiedToken == verifyToken);
     }
 
+    public async Task<MUser?> GetByRefreshToken(string refreshToken)
+    {
+        return await _db.Set<MUser>().FirstOrDefaultAsync(u => u.JwtRefreshToken == refreshToken);
+    }
+
     public async Task<List<MUser>> GetExpiredUnverified(DateTime now)
     {
         return await _db.Set<MUser>()
