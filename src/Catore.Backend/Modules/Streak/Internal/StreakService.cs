@@ -22,6 +22,7 @@ internal class StreakService : IStreakQueries, IStreakCommands
     private readonly IFreezeCommands _freezeCommands;
     private readonly INotificationSender _notificationSender;
     private readonly ILogger<StreakService> _logger;
+    private readonly bool _streakCountingEnabled;
 
     public StreakService(
         StreakRepository repository,
@@ -34,7 +35,8 @@ internal class StreakService : IStreakQueries, IStreakCommands
         IFreezeQueries freezeQueries,
         IFreezeCommands freezeCommands,
         INotificationSender notificationSender,
-        ILogger<StreakService> logger)
+        ILogger<StreakService> logger,
+        IConfiguration configuration)
     {
         _repository = repository;
         _authQueries = authQueries;
@@ -47,6 +49,12 @@ internal class StreakService : IStreakQueries, IStreakCommands
         _freezeCommands = freezeCommands;
         _notificationSender = notificationSender;
         _logger = logger;
+        // Kill-switch dev-only (appsettings.Development.json, Features:StreakCountingEnabled) —
+        // user minta streak JANGAN kehitung dulu selama app masih development (2026-09-21),
+        // biar testing berulang-ulang gak numpuk angka streak yg gak representatif. Default TRUE
+        // kalau config gak ada (mis. appsettings.json production gak override ini) — matinya
+        // eksplisit opt-out, bukan default off yg gampang kelupaan nyalain balik.
+        _streakCountingEnabled = configuration.GetValue("Features:StreakCountingEnabled", true);
     }
 
     public async Task<bool> HasActiveGraceWindow(long userId)
@@ -157,6 +165,8 @@ internal class StreakService : IStreakQueries, IStreakCommands
 
     public async Task RecordDailyLog(long userId, DateOnly date)
     {
+        if (!_streakCountingEnabled) return;
+
         var state = await GetOrCreate(userId);
 
         if (state.LastLoggedDate == date)
