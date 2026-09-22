@@ -46,9 +46,9 @@ internal class ConsumptionService : IConsumptionQueries, IConsumptionCommands
         return await _repository.GetLoggedDates(userId, startDate, endDate);
     }
 
-    public async Task WipeUserData(long userId, DateTime wipedAt)
+    public async Task WipeUserData(long userId, DateTime wipedAt, string wipeReason)
     {
-        await _repository.WipeUserData(userId, wipedAt);
+        await _repository.WipeUserData(userId, wipedAt, wipeReason);
     }
 
     public async Task MarkDayFrozen(long userId, DateOnly date)
@@ -66,7 +66,7 @@ internal class ConsumptionService : IConsumptionQueries, IConsumptionCommands
             {
                 UserId = userId,
                 RecordDate = date,
-                DeficitCategory = deficitCategoryPk,
+                CalorieCategory = deficitCategoryPk,
                 PaToday = false,
                 EffectiveTdee = effectiveLimit.Tdee,
                 EffectiveLimit = effectiveLimit.Limit,
@@ -93,7 +93,7 @@ internal class ConsumptionService : IConsumptionQueries, IConsumptionCommands
             {
                 UserId = userId,
                 RecordDate = date,
-                DeficitCategory = deficitCategoryPk,
+                CalorieCategory = deficitCategoryPk,
                 PaToday = false,
                 EffectiveTdee = effectiveLimit?.Tdee ?? 0,
                 EffectiveLimit = effectiveLimit?.Limit ?? 0,
@@ -110,13 +110,13 @@ internal class ConsumptionService : IConsumptionQueries, IConsumptionCommands
         var dailyRecord = await _repository.GetDailyRecord(userId, date);
         if (dailyRecord is null) return null;
 
-        var deficitCategoryName = request.DeficitCategory ?? await _paramQueries.ResolveName(dailyRecord.DeficitCategory) ?? DefaultDeficitCategory;
+        var deficitCategoryName = request.CalorieCategory ?? await _paramQueries.ResolveName(dailyRecord.CalorieCategory) ?? DefaultDeficitCategory;
         var paToday = request.PaToday ?? dailyRecord.PaToday;
 
         var effectiveLimit = await _profileQueries.CalculateLimit(userId, deficitCategoryName, paToday);
         if (effectiveLimit is null) return null;
 
-        dailyRecord.DeficitCategory = await _paramQueries.ResolvePk(DeficitCategoryParamType, deficitCategoryName);
+        dailyRecord.CalorieCategory = await _paramQueries.ResolvePk(DeficitCategoryParamType, deficitCategoryName);
         dailyRecord.PaToday = paToday;
         dailyRecord.EffectiveTdee = effectiveLimit.Tdee;
         dailyRecord.EffectiveLimit = effectiveLimit.Limit;
@@ -128,7 +128,7 @@ internal class ConsumptionService : IConsumptionQueries, IConsumptionCommands
     private async Task<DailyRecordDto> BuildDailyRecordDto(TDailyRecord dailyRecord, long userId, DateOnly date)
     {
         var intakeSum = await _repository.GetIntakeSum(userId, date);
-        var deficitCategoryName = await _paramQueries.ResolveName(dailyRecord.DeficitCategory) ?? DefaultDeficitCategory;
+        var deficitCategoryName = await _paramQueries.ResolveName(dailyRecord.CalorieCategory) ?? DefaultDeficitCategory;
         return new DailyRecordDto(dailyRecord.RecordDate, deficitCategoryName, dailyRecord.PaToday, dailyRecord.EffectiveTdee, dailyRecord.EffectiveLimit, dailyRecord.IsFrozen, intakeSum);
     }
 
@@ -192,7 +192,7 @@ internal class ConsumptionService : IConsumptionQueries, IConsumptionCommands
             {
                 UserId = userId,
                 RecordDate = entryDate,
-                DeficitCategory = deficitCategoryPk,
+                CalorieCategory = deficitCategoryPk,
                 PaToday = false,
                 EffectiveTdee = effectiveLimit.Tdee,
                 EffectiveLimit = effectiveLimit.Limit,
@@ -235,7 +235,7 @@ internal class ConsumptionService : IConsumptionQueries, IConsumptionCommands
             savedDtos.Add(new ConsumptionEntrySavedDto(entry.EntryPk, item.FoodName, item.Calories, mealTypeName, entry.EntryTimestamp));
         }
 
-        var deficitCategoryName = await _paramQueries.ResolveName(dailyRecord.DeficitCategory) ?? DefaultDeficitCategory;
+        var deficitCategoryName = await _paramQueries.ResolveName(dailyRecord.CalorieCategory) ?? DefaultDeficitCategory;
 
         return new AddEntriesResultDto(
             true,

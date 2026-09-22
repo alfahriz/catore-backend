@@ -105,10 +105,12 @@ public class AppDbContext : DbContext
             entity.Property(e => e.CreatedBy).HasColumnName("createdBy");
             entity.Property(e => e.ModifiedOn).HasColumnName("modifiedOn");
             entity.Property(e => e.ModifiedBy).HasColumnName("modifiedBy");
+            entity.Property(e => e.GoalMode).HasColumnName("goalMode");
             entity.HasOne<MUser>().WithMany().HasForeignKey(e => e.UserId).HasConstraintName("FK_mprofile_muser");
             entity.HasOne<MParam>().WithMany().HasForeignKey(e => e.Gender).HasConstraintName("FK_mprofile_gender");
             entity.HasOne<MParam>().WithMany().HasForeignKey(e => e.BaseActLevel).HasConstraintName("FK_mprofile_baseActLevel");
             entity.HasOne<MParam>().WithMany().HasForeignKey(e => e.MetricParam).HasConstraintName("FK_mprofile_metricParam");
+            entity.HasOne<MParam>().WithMany().HasForeignKey(e => e.GoalMode).HasConstraintName("FK_mprofile_goalMode");
         });
 
         modelBuilder.Entity<MConsumption>(entity =>
@@ -150,7 +152,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.UserId).HasColumnName("userId");
             entity.Property(e => e.RecordDate).HasColumnName("recordDate");
             entity.HasIndex(e => new { e.UserId, e.RecordDate }).IsUnique();
-            entity.Property(e => e.DeficitCategory).HasColumnName("deficitCategory");
+            entity.Property(e => e.CalorieCategory).HasColumnName("calorieCategory");
             entity.Property(e => e.PaToday).HasColumnName("paToday");
             entity.Property(e => e.EffectiveTdee).HasColumnName("effectiveTdee");
             entity.Property(e => e.EffectiveLimit).HasColumnName("effectiveLimit");
@@ -160,8 +162,9 @@ public class AppDbContext : DbContext
             entity.Property(e => e.ModifiedOn).HasColumnName("modifiedOn");
             entity.Property(e => e.IsDeleted).HasColumnName("isDeleted");
             entity.Property(e => e.IsDeletedOn).HasColumnName("isDeletedOn");
+            entity.Property(e => e.WipeReason).HasColumnName("wipeReason");
             entity.HasOne<MUser>().WithMany().HasForeignKey(e => e.UserId).HasConstraintName("FK_tdailyrecord_muser");
-            entity.HasOne<MParam>().WithMany().HasForeignKey(e => e.DeficitCategory).HasConstraintName("FK_tdailyrecord_deficitCategory");
+            entity.HasOne<MParam>().WithMany().HasForeignKey(e => e.CalorieCategory).HasConstraintName("FK_tdailyrecord_calorieCategory");
             entity.HasOne<MParam>().WithMany().HasForeignKey(e => e.CreatedVia).HasConstraintName("FK_tdailyrecord_createdVia");
         });
 
@@ -177,6 +180,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.ModifiedOn).HasColumnName("modifiedOn");
             entity.Property(e => e.IsDeleted).HasColumnName("isDeleted");
             entity.Property(e => e.IsDeletedOn).HasColumnName("isDeletedOn");
+            entity.Property(e => e.WipeReason).HasColumnName("wipeReason");
             entity.HasIndex(e => new { e.UserId, e.CheckpointDate }).IsUnique();
             entity.HasOne<MUser>().WithMany().HasForeignKey(e => e.UserId).HasConstraintName("FK_tweightlog_muser");
         });
@@ -191,6 +195,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.CurrentStreak).HasColumnName("currentStreak");
             entity.Property(e => e.LastLoggedDate).HasColumnName("lastLoggedDate");
             entity.Property(e => e.IsStreakFrozen).HasColumnName("isStreakFrozen");
+            entity.Property(e => e.WipeReason).HasColumnName("wipeReason");
             entity.Property(e => e.ModifiedOn).HasColumnName("modifiedOn");
             entity.HasOne<MUser>().WithMany().HasForeignKey(e => e.UserId).HasConstraintName("FK_tstreak_muser");
         });
@@ -208,6 +213,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.DaysSinceLastWipeFreeze).HasColumnName("daysSinceLastWipeFreeze");
             entity.Property(e => e.LastStreakFreezeGainedDate).HasColumnName("lastStreakFreezeGainedDate");
             entity.Property(e => e.LastWipeFreezeGainedDate).HasColumnName("lastWipeFreezeGainedDate");
+            entity.Property(e => e.WipeReason).HasColumnName("wipeReason");
             entity.Property(e => e.ModifiedOn).HasColumnName("modifiedOn");
             entity.HasOne<MUser>().WithMany().HasForeignKey(e => e.UserId).HasConstraintName("FK_tfreeze_muser");
         });

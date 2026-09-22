@@ -97,4 +97,10 @@ internal class NotificationService : INotificationSender, INotificationCommands
     {
         return SendPush(userId, "Goal achieved!", $"Congratulations, you've reached your goal weight. Your streak ({frozenStreakCount}) is now frozen.");
     }
+
+    public Task SendMaintainRangeExceededNotif(long userId, string suggestedMode)
+    {
+        return SendPush(userId, "Time to adjust your plan?",
+            $"Your weight has moved outside the Maintain range. Consider switching to {suggestedMode} mode.");
+    }
 }

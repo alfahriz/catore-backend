@@ -96,7 +96,7 @@ internal class FreezeService : IFreezeQueries, IFreezeCommands
         return true;
     }
 
-    public async Task ResetAfterWipe(long userId)
+    public async Task ResetAfterWipe(long userId, string wipeReason)
     {
         var state = await GetOrCreate(userId);
         state.StreakFreezeCount = 0;
@@ -105,6 +105,7 @@ internal class FreezeService : IFreezeQueries, IFreezeCommands
         state.DaysSinceLastWipeFreeze = 0;
         state.LastStreakFreezeGainedDate = null;
         state.LastWipeFreezeGainedDate = null;
+        state.WipeReason = wipeReason;
         await _repository.Update(state);
     }
 }

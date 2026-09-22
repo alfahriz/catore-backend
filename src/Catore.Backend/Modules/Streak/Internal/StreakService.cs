@@ -216,6 +216,16 @@ internal class StreakService : IStreakQueries, IStreakCommands
         await _repository.Update(state);
     }
 
+    public async Task ResetStreak(long userId, string wipeReason)
+    {
+        var state = await GetOrCreate(userId);
+        state.CurrentStreak = 0;
+        state.LastLoggedDate = null;
+        state.IsStreakFrozen = false;
+        state.WipeReason = wipeReason;
+        await _repository.Update(state);
+    }
+
     // Dipanggil job wipe-check (WipeCheckJob) tiap jam, 1 user per panggilan.
     // Urutan eksekusi sesuai Section 5.1 & 5.6: evaluasi tanggal tertua yang expired ->
     // cek Streak Freeze dulu (cover -> Frozen, streak aman) -> gagal -> streak reset + lanjut cek Wipe Freeze
@@ -257,16 +267,20 @@ internal class StreakService : IStreakQueries, IStreakCommands
                 else
                 {
                     // Tidak ada Wipe Freeze -> eksekusi wipe total (semua tabel data + reset streak/freeze).
-                    await _consumptionCommands.WipeUserData(userId, utcNow);
-                    await _weightTrackingCommands.WipeUserData(userId, utcNow);
-                    await _profileCommands.MarkWiped(userId, utcNow);
+                    // WipeReason="LostStreak" -- wipe rutin dipicu sistem (missed-log/grace-window),
+                    // beda dari wipe ganti-mode manual (WipeReason="Manual", lihat ProfileAccountService.ChangeGoalMode).
+                    const string wipeReason = "LostStreak";
+                    await _consumptionCommands.WipeUserData(userId, utcNow, wipeReason);
+                    await _weightTrackingCommands.WipeUserData(userId, utcNow, wipeReason);
+                    await _profileCommands.MarkWiped(userId, utcNow, wipeReason);
 
                     state.CurrentStreak = 0;
                     state.LastLoggedDate = null;
                     state.IsStreakFrozen = false;
+                    state.WipeReason = wipeReason;
                     await _repository.Update(state);
 
-                    await _freezeCommands.ResetAfterWipe(userId);
+                    await _freezeCommands.ResetAfterWipe(userId, wipeReason);
                     outcome = "wiped";
                 }
             }

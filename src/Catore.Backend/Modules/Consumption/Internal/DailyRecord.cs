@@ -5,7 +5,7 @@ internal class TDailyRecord
     public long DailyRecordPk { get; set; }
     public long UserId { get; set; }
     public DateOnly RecordDate { get; set; }
-    public long? DeficitCategory { get; set; }
+    public long? CalorieCategory { get; set; }
     public bool PaToday { get; set; }
     public decimal EffectiveTdee { get; set; }
     public decimal EffectiveLimit { get; set; }
@@ -15,4 +15,5 @@ internal class TDailyRecord
     public DateTime ModifiedOn { get; set; }
     public bool IsDeleted { get; set; }
     public DateTime? IsDeletedOn { get; set; }
+    public string? WipeReason { get; set; }
 }

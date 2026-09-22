@@ -12,6 +12,7 @@ internal class MProfile
     public long? BaseActLevel { get; set; }
     public decimal? GoalWeight { get; set; }
     public bool IsRecomendGoalUsed { get; set; }
+    public long? GoalMode { get; set; }
     public long? MetricParam { get; set; }
     public string Timezone { get; set; } = string.Empty;
     public DateTime ModifiedOn { get; set; }

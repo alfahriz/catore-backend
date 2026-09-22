@@ -36,7 +36,7 @@ public record ConsumptionEntrySavedDto(
 
 public record DailyRecordDto(
     DateOnly RecordDate,
-    string DeficitCategory,
+    string CalorieCategory,
     bool PaToday,
     decimal EffectiveTdee,
     decimal EffectiveLimit,
@@ -45,7 +45,7 @@ public record DailyRecordDto(
 );
 
 public record UpdateDailyRecordRequestDto(
-    string? DeficitCategory,
+    string? CalorieCategory,
     bool? PaToday
 );
 

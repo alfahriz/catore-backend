@@ -97,6 +97,7 @@ CREATE TABLE mprofile (
     weight                   numeric NOT NULL,
     "goalWeight"             numeric,
     "isRecomendGoalUsed"     boolean NOT NULL DEFAULT false,        -- INVERT dari goalweightismanual lama
+    "goalMode"               bigint,                                -- FK -> mparam (GOAL_MODE: Cutting/Bulking/Maintain), default Cutting
     "baseActLevel"           bigint,                                -- FK -> mparam (ACTIVITY_LEVEL)
     "metricParam"            bigint,                                -- FK -> mparam (METRIC_UNIT)
     timezone                 text NOT NULL,
@@ -110,7 +111,8 @@ CREATE TABLE mprofile (
     CONSTRAINT "FK_mprofile_muser" FOREIGN KEY ("userId") REFERENCES muser ("userPk"),
     CONSTRAINT "FK_mprofile_gender" FOREIGN KEY (gender) REFERENCES mparam ("paramPK"),
     CONSTRAINT "FK_mprofile_baseActLevel" FOREIGN KEY ("baseActLevel") REFERENCES mparam ("paramPK"),
-    CONSTRAINT "FK_mprofile_metricParam" FOREIGN KEY ("metricParam") REFERENCES mparam ("paramPK")
+    CONSTRAINT "FK_mprofile_metricParam" FOREIGN KEY ("metricParam") REFERENCES mparam ("paramPK"),
+    CONSTRAINT "FK_mprofile_goalMode" FOREIGN KEY ("goalMode") REFERENCES mparam ("paramPK")
 );
 CREATE UNIQUE INDEX "IX_mprofile_userId" ON mprofile ("userId");
 
@@ -161,6 +163,7 @@ CREATE TABLE tweightlog (
     "modifiedOn"        timestamptz,
     "isDeleted"         boolean NOT NULL DEFAULT false,
     "isDeletedOn"       timestamptz,
+    "wipeReason"        text,                                       -- 'Manual' (ganti mode) / 'LostStreak' (wipe rutin), NULL kalau belum pernah di-wipe
     CONSTRAINT "FK_tweightlog_muser" FOREIGN KEY ("userId") REFERENCES muser ("userPk")
 );
 CREATE UNIQUE INDEX "IX_tweightlog_userId_checkpointDate" ON tweightlog ("userId", "checkpointDate");
@@ -175,7 +178,7 @@ CREATE TABLE tdailyrecord (
     "dailyRecordPk"     bigserial PRIMARY KEY,
     "userId"            bigint NOT NULL,                           -- FK -> muser
     "recordDate"        date NOT NULL,
-    "deficitCategory"   bigint,                                     -- FK -> mparam (DEFICIT_CATEGORY)
+    "calorieCategory"   bigint,                                     -- FK -> mparam (DEFICIT_CATEGORY atau BULKING_CATEGORY, tergantung mprofile.goalMode). RENAMED dari deficitCategory 2026-09-22
     "paToday"           boolean NOT NULL DEFAULT false,
     "effectiveTdee"     numeric NOT NULL,                           -- dikunci
     "effectiveLimit"    numeric NOT NULL,                           -- dikunci
@@ -185,8 +188,9 @@ CREATE TABLE tdailyrecord (
     "modifiedOn"        timestamptz NOT NULL DEFAULT now(),
     "isDeleted"         boolean NOT NULL DEFAULT false,
     "isDeletedOn"       timestamptz,
+    "wipeReason"        text,                                       -- 'Manual' (ganti mode) / 'LostStreak' (wipe rutin), NULL kalau belum pernah di-wipe
     CONSTRAINT "FK_tdailyrecord_muser" FOREIGN KEY ("userId") REFERENCES muser ("userPk"),
-    CONSTRAINT "FK_tdailyrecord_deficitCategory" FOREIGN KEY ("deficitCategory") REFERENCES mparam ("paramPK"),
+    CONSTRAINT "FK_tdailyrecord_calorieCategory" FOREIGN KEY ("calorieCategory") REFERENCES mparam ("paramPK"),
     CONSTRAINT "FK_tdailyrecord_createdVia" FOREIGN KEY ("createdVia") REFERENCES mparam ("paramPK")
 );
 CREATE UNIQUE INDEX "IX_tdailyrecord_userId_recordDate" ON tdailyrecord ("userId", "recordDate");
@@ -200,6 +204,7 @@ CREATE TABLE tstreak (
     "currentStreak"     integer NOT NULL DEFAULT 0,
     "lastLoggedDate"    date,
     "isStreakFrozen"    boolean NOT NULL DEFAULT false,             -- beda konsep dari tfreeze, lihat komentar tfreeze
+    "wipeReason"        text,                                       -- 'Manual' (ganti mode) / 'LostStreak' (wipe rutin), NULL kalau belum pernah di-wipe
     "modifiedOn"        timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT "FK_tstreak_muser" FOREIGN KEY ("userId") REFERENCES muser ("userPk")
 );
@@ -220,6 +225,7 @@ CREATE TABLE tfreeze (
     "daysSinceLastWipeFreeze"       integer NOT NULL DEFAULT 0,
     "lastStreakFreezeGainedDate"    date,
     "lastWipeFreezeGainedDate"      date,
+    "wipeReason"                    text,                          -- 'Manual' (ganti mode) / 'LostStreak' (wipe rutin), NULL kalau belum pernah di-wipe
     "modifiedOn"                    timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT "FK_tfreeze_muser" FOREIGN KEY ("userId") REFERENCES muser ("userPk")
 );

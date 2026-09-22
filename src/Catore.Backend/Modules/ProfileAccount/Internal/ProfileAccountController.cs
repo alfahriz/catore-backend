@@ -60,6 +60,19 @@ public class ProfileAccountController : ControllerBase
         }
         return Ok();
     }
+
+    // Ganti mode (Cutting/Bulking/Maintain) — TRIGGER WIPE PENUH (WipeReason="Manual"),
+    // ireversibel. FE WAJIB tampilkan konfirmasi eksplisit sebelum panggil endpoint ini.
+    [HttpPost("goal-mode")]
+    public async Task<IActionResult> ChangeGoalMode([FromBody] ChangeGoalModeRequestDto request)
+    {
+        var result = await _commands.ChangeGoalMode(CurrentUserId, request);
+        if (!result.Success)
+        {
+            return BadRequest(new { error = result.ErrorMessage });
+        }
+        return Ok();
+    }
 }
 
 public record ActivityAssessmentRequest(string WorkEnvironment, string ExerciseFrequency);

@@ -47,7 +47,7 @@ internal class WeightTrackingRepository
         await _db.SaveChangesAsync();
     }
 
-    public async Task WipeUserData(long userId, DateTime wipedAt)
+    public async Task WipeUserData(long userId, DateTime wipedAt, string wipeReason)
     {
         var entries = await _db.Set<TWeightLog>()
             .Where(w => w.UserId == userId && !w.IsDeleted)
@@ -57,6 +57,7 @@ internal class WeightTrackingRepository
         {
             entry.IsDeleted = true;
             entry.IsDeletedOn = wipedAt;
+            entry.WipeReason = wipeReason;
         }
 
         await _db.SaveChangesAsync();

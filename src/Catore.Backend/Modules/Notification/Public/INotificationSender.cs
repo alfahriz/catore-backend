@@ -11,4 +11,7 @@ public interface INotificationSender
     Task SendPasswordResetRequestedNotif(long userId);
     Task SendWeighInReminder(long userId);
     Task SendGoalAchievedNotif(long userId, int frozenStreakCount);
+    // Maintain mode: current weight/TDEE tembus pagar [TDEE-500, TDEE+350] -- saran pindah
+    // Cutting/Bulking. suggestedMode = "Cutting" (kelebihan) atau "Bulking" (kekurangan).
+    Task SendMaintainRangeExceededNotif(long userId, string suggestedMode);
 }

@@ -39,9 +39,9 @@ internal class WeightTrackingService : IWeightTrackingQueries, IWeightTrackingCo
             .ToList();
     }
 
-    public async Task WipeUserData(long userId, DateTime wipedAt)
+    public async Task WipeUserData(long userId, DateTime wipedAt, string wipeReason)
     {
-        await _repository.WipeUserData(userId, wipedAt);
+        await _repository.WipeUserData(userId, wipedAt, wipeReason);
     }
 
     // Section 4.3: max 1 entry/hari, log ulang hari sama = update (edit), bukan insert baru.
@@ -58,7 +58,15 @@ internal class WeightTrackingService : IWeightTrackingQueries, IWeightTrackingCo
         }
 
         var date = DateOnly.FromDateTime(entryTimestamp);
-        var goalAchieved = !profile.IsUpgraded && profile.GoalWeight.HasValue && weightValue <= profile.GoalWeight.Value;
+        // Goal-achieved arahnya tergantung goalMode: Cutting = turun ke goal (<=), Bulking =
+        // naik ke goal (>=), Maintain = gak ada trigger achieved sama sekali (goalWeight di
+        // Maintain cuma referensi visual "titik yg dijaga", bukan target yg "harus dicapai").
+        var goalAchieved = !profile.IsUpgraded && profile.GoalWeight.HasValue && profile.GoalMode switch
+        {
+            "Bulking" => weightValue >= profile.GoalWeight.Value,
+            "Maintain" => false,
+            _ => weightValue <= profile.GoalWeight.Value // Cutting (default)
+        };
 
         await using (var transaction = await _repository.BeginTransaction())
         {
@@ -91,6 +99,18 @@ internal class WeightTrackingService : IWeightTrackingQueries, IWeightTrackingCo
         {
             var streakSummary = await StreakQueries.GetStreakSummary(userId);
             await _notificationSender.SendGoalAchievedNotif(userId, streakSummary.CurrentStreakCount);
+        }
+        else if (profile.GoalMode == "Maintain")
+        {
+            // Pagar Maintain — cek SETELAH weight ke-update, gak masuk goalAchieved (Maintain
+            // gak py trigger achieved). auto-transisi TANPA wipe kalau user setuju saran ini
+            // ditangani terpisah lewat endpoint ChangeGoalMode biasa (streak lanjut jalan,
+            // requirement eksplisit: auto-suggest BUKAN wipe, beda dari ganti mode manual).
+            var rangeCheck = await _profileQueries.CheckMaintainRange(userId, weightValue);
+            if (rangeCheck is { ExceedsRange: true, SuggestedMode: not null })
+            {
+                await _notificationSender.SendMaintainRangeExceededNotif(userId, rangeCheck.SuggestedMode);
+            }
         }
 
         return new AddWeightLogResultDto(true, null, date, weightValue, goalAchieved);

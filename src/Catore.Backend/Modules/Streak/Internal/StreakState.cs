@@ -7,5 +7,6 @@ internal class TStreak
     public int CurrentStreak { get; set; }
     public DateOnly? LastLoggedDate { get; set; }
     public bool IsStreakFrozen { get; set; }
+    public string? WipeReason { get; set; }
     public DateTime ModifiedOn { get; set; }
 }

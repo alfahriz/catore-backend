@@ -10,5 +10,6 @@ internal class TFreeze
     public int DaysSinceLastWipeFreeze { get; set; }
     public DateOnly? LastStreakFreezeGainedDate { get; set; }
     public DateOnly? LastWipeFreezeGainedDate { get; set; }
+    public string? WipeReason { get; set; }
     public DateTime ModifiedOn { get; set; }
 }

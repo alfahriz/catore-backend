@@ -108,7 +108,7 @@ internal class ConsumptionRepository
         return dates.ToHashSet();
     }
 
-    public async Task WipeUserData(long userId, DateTime wipedAt)
+    public async Task WipeUserData(long userId, DateTime wipedAt, string wipeReason)
     {
         var entries = await _db.Set<TConsumption>()
             .Where(e => e.UserId == userId && !e.IsDeleted)
@@ -117,6 +117,9 @@ internal class ConsumptionRepository
         {
             entry.IsDeleted = true;
             entry.IsDeletedOn = wipedAt;
+            // tconsumption gak py kolom wipeReason (cuma tdailyrecord/tweightlog/tstreak/
+            // tfreeze yg dikasih, lihat migration AddGoalModeAndWipeReason) -- alasan wipe
+            // tetap bisa ditelusuri via JOIN ke tdailyrecord tanggal yg sama.
         }
 
         var records = await _db.Set<TDailyRecord>()
@@ -126,6 +129,7 @@ internal class ConsumptionRepository
         {
             record.IsDeleted = true;
             record.IsDeletedOn = wipedAt;
+            record.WipeReason = wipeReason;
             // actualCalories WAJIB direset saat wipe, biar tetap sinkron sama tconsumption
             // yg baru disoft-delete di atas (lihat catatan schema-curation soal ini).
             record.ActualCalories = 0;
